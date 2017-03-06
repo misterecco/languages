@@ -1,3 +1,5 @@
+module Lab01 where
+
 -- Zadanie 1
 
 myhead [] = error "Nie ma glowy"
@@ -63,11 +65,23 @@ inits (x:xs) = []:[x:ys | ys <- inits xs]
 
 partitions :: [a] -> [([a], [a])]
 partitions [] = [([], [])]
-partitions (x:xs) = ([], x:xs):[(x:y, ys) | (y, ys) <- partitions xs]
+partitions (x:xs) = ([], x:xs):[(x:y1, y2) | (y1, y2) <- partitions xs]
 
 
 -- Zadanie 4
 
 permutations :: [a] -> [[a]]
 permutations [] = [[]]
--- permutations (x:xs) = 
+permutations (x:xs) = [y1 ++ (x:y2) | ys <- permutations xs,
+                                      (y1, y2) <- partitions ys]
+
+-- Zadanie 5
+
+nub :: Eq t => [t] -> [t]
+nub [] = []
+nub (x:xs) = x:zs where
+  ys = remove xs x
+  zs = nub ys
+
+remove :: Eq a => [a] -> a -> [a]
+remove l y = filter (/= y) l
