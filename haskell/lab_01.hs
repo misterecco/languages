@@ -67,6 +67,12 @@ partitions :: [a] -> [([a], [a])]
 partitions [] = [([], [])]
 partitions (x:xs) = ([], x:xs):[(x:y1, y2) | (y1, y2) <- partitions xs]
 
+partitions2 :: [a] -> [([a], [a])]
+partitions2 l = map (\(x, y) -> (reverse x, y)) $ pom (reverse l,[]) []
+  where
+    pom p@([], _) w = p:w
+    pom p@(x:xs, lr) w = pom (xs, x:lr) (p:w)
+
 
 -- Zadanie 4
 
