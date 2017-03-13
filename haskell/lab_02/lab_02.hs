@@ -6,6 +6,10 @@ module Lab02 where
 triads :: Int -> [(Int, Int, Int)]
 triads n = notMultiplied $ filter pyth $ triples n
 
+triads2 :: Int -> [(Int, Int, Int)]
+triads2 n =
+  [(a, b, c) | a <- [1..n], b <- [a..n], c <- [b..n], a*a + b*b == c*c, (a `gcd` b) `gcd` c == 1]
+
 triples :: Int -> [(Int, Int, Int)]
 triples n = [(x, y, z) | x <- [1..n],
                          y <- [1..n],
@@ -27,8 +31,12 @@ notMultiplied (x:xs) = x:zs
 -- Zadanie 7
 -- Liczby pierwsze
 
-primes :: [Int]
+primes :: [Integer]
 primes = [n | n<-[2..], all ((> 0).rem n) [2..n-1]]
+
+prim :: [Integer]
+prim = sieve [2..] where
+  sieve (p:xs) = p : sieve [x | x <- xs, x `mod` p /= 0]
 
 -- Liczby Fibonacciego
 
@@ -45,6 +53,9 @@ fib2 n = foo n 0 1
     foo 0 x _ = x
     foo x f f1 = foo (x-1) f1 (f + f1)
 
+fibs :: [Integer]
+fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
+
 -- Silnia
 factorial :: Int -> Int
 factorial n = foo n 1
@@ -52,6 +63,17 @@ factorial n = foo n 1
     foo 0 x = x
     foo x acc = foo (x-1) (x * acc)
 
+ones :: [Integer]
+ones = 1 : ones
+
+nats :: [Integer]
+nats = 0 : zipWith (+) ones nats
+
+fact :: [Integer]
+fact = 1 : zipWith (*) [1..] fact
+
+factn :: Integer -> Integer
+factn n = product [1..n]
 
 -- Zadanie 8
 
@@ -71,3 +93,60 @@ positions c l = foo l 0 []
     foo (x:xs) n acc
       | x == c = foo xs (n+1) ((n+1):acc)
       | otherwise = foo xs (n+1) acc
+
+pos :: Char -> String -> [Int]
+pos c s = [ i | (d, i) <- zip s [0..], c == d]
+
+ind :: Char -> String -> Maybe Int
+ind c s =
+  case pos c s of
+    [] -> Nothing
+    x:_ -> Just x
+
+-- Zadanie 9
+digit :: Int -> Char
+digit n = iterate succ '0' !! n
+
+-- digit2 d = chr $ ord '0' + d
+
+si n s
+  | n == 0 = s
+  | otherwise = si (n `div` 10) (digit (n `mod` 10) : s)
+
+showInt 0 = "0"
+showInt n = si n []
+
+showIntListContent [] = ""
+showIntListContent [n] = showInt n
+showIntListContent (n:ns) = showInt n ++ "," ++ showIntListContent ns
+
+showIntList ns = "[" ++ showIntListContent ns ++ "]"
+
+showLst :: (a -> String) -> [a] -> String
+showLst f [] = []
+showLst f [x] = f x
+showLst f (x:xs) = f x ++ "," ++ showLst f xs
+
+-- concat1 = foldr (++) []
+
+-- incAll
+incAll [] = []
+incAll (x:xs) = let
+  zwieksz [] = []
+  zwieksz (x:xs) = (x+1):(zwieksz xs)
+  in (zwieksz x):(incAll xs)
+
+incAll1 :: Num b => [[b]] -> [[b]]
+incAll1 x = let zwieksz = map (+1) in map zwieksz x
+
+silniaFoldl n = foldl (*) 1 [1..n]
+silniaFoldr n = foldr (*) 1 [1..n]
+
+nubP p [] = []
+nubP p (x:xs) = x:(filter (\y -> not (p y x)) (nubP p xs))
+
+nub l = nubP (==) l
+
+przeplot :: [a] -> [a] -> [a]
+przeplot [] xs = xs
+przeplot (x:xs) ys = x : przeplot ys xs
