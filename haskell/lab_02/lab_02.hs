@@ -109,43 +109,45 @@ digit n = iterate succ '0' !! n
 
 -- digit2 d = chr $ ord '0' + d
 
+si :: Int -> String -> String
 si n s
   | n == 0 = s
   | otherwise = si (n `div` 10) (digit (n `mod` 10) : s)
 
+showInt :: Int -> String
 showInt 0 = "0"
 showInt n = si n []
 
+showIntListContent :: [Int] -> String
 showIntListContent [] = ""
 showIntListContent [n] = showInt n
 showIntListContent (n:ns) = showInt n ++ "," ++ showIntListContent ns
 
+showIntList :: [Int] -> String
 showIntList ns = "[" ++ showIntListContent ns ++ "]"
 
 showLst :: (a -> String) -> [a] -> String
-showLst f [] = []
+showLst _ [] = []
 showLst f [x] = f x
 showLst f (x:xs) = f x ++ "," ++ showLst f xs
 
 -- concat1 = foldr (++) []
 
 -- incAll
-incAll [] = []
-incAll (x:xs) = let
-  zwieksz [] = []
-  zwieksz (x:xs) = (x+1):(zwieksz xs)
-  in (zwieksz x):(incAll xs)
+incAll :: Num b => [[b]] -> [[b]]
+incAll x = let zwieksz = map (+1) in map zwieksz x
 
-incAll1 :: Num b => [[b]] -> [[b]]
-incAll1 x = let zwieksz = map (+1) in map zwieksz x
-
+silniaFoldl :: (Num b, Enum b) => b -> b
 silniaFoldl n = foldl (*) 1 [1..n]
+silniaFoldr :: (Num b, Enum b) => b -> b
 silniaFoldr n = foldr (*) 1 [1..n]
 
-nubP p [] = []
-nubP p (x:xs) = x:(filter (\y -> not (p y x)) (nubP p xs))
+nubP :: (t -> t -> Bool) -> [t] -> [t]
+nubP _ [] = []
+nubP p (x:xs) = x : filter (\y -> not (p y x)) (nubP p xs)
 
-nub l = nubP (==) l
+nub :: Eq a => [a] -> [a]
+nub = nubP (==)
 
 przeplot :: [a] -> [a] -> [a]
 przeplot [] xs = xs
