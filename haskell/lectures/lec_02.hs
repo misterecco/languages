@@ -1,5 +1,7 @@
 module Lec02 where
 
+-- import Prelude hiding(Functor(..))
+
 data TakNie = Tak | Nie
   deriving (Eq, Show)
 
@@ -61,3 +63,9 @@ instance Por TakNie where
   _   ===  _  = Nie
 
   a =/= b = nie $ a === b
+
+
+class (Functor f) => Applicative f
+  where
+    pure  :: a -> f a
+    (<$>) :: f (a -> b) -> f a -> f b
