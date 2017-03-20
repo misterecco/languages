@@ -1,4 +1,4 @@
-module Zad_01 where
+module Tree where
 
 data Tree a = Empty | Node a (Tree a) (Tree a)
   deriving (Ord)
@@ -26,16 +26,20 @@ toList :: Tree a -> [a]
 toList Empty = []
 toList (Node a lt rt) = toList lt ++ a : toList rt
 
--- toList t@(Node a lt rt) = foo t []
---   where
---     foo Empty [] = []
---     foo t acc =
+toList2 :: Tree a -> [a]
+toList2 t = dolacz t []
+  where
+    dolacz :: Tree a -> [a] -> [a]
+    dolacz Empty reszta = reszta
+    dolacz (Node x l r) reszta = dolacz l ([x] ++ dolacz r reszta)
+
 
 insert :: (Ord a) => a -> Tree a -> Tree a
 insert a Empty = Node a Empty Empty
 insert a (Node b lt rt)
   | a <= b = Node b (insert a lt) rt
   | otherwise = Node b lt (insert a rt)
+
 
 contains :: (Ord a) => a -> Tree a -> Bool
 contains _ Empty = False
@@ -44,8 +48,10 @@ contains a (Node b lt rt)
   | a < b = contains a lt
   | otherwise = contains a rt
 
+
 fromList :: (Ord a) => [a] -> Tree a
 fromList = foldr insert Empty
 
-sort :: (Ord a) => [a] -> [a]
-sort = toList . fromList
+
+-- sort :: (Ord a) => [a] -> [a]
+-- sort = toList . fromList
