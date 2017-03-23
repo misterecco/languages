@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedString #-}
 import Data.String
 
+
 module Zad_04 where
 
 data Exp
