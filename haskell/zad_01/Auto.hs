@@ -1,5 +1,6 @@
 module Auto
 (
+  Auto,
   accepts,
   emptyA,
   epsA,
