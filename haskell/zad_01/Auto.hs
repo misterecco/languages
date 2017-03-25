@@ -108,6 +108,7 @@ fromLists st initSt accSt trans = A {
   states = st,
   initStates = initSt,
   isAccepting = (`elem` accSt),
+  -- TODO: use Maybe monad
   transition = \dst ch -> let f = find (\(s, c, _) -> s == dst && c == ch) trans in
     case f of
       Just (_, _, d) -> d

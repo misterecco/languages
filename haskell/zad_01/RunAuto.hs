@@ -1,5 +1,6 @@
 module RunAuto where
 
+import Auto
 import System.Environment
 import Text.Read
 -- import Control.Monad
@@ -16,12 +17,22 @@ instance Bounded Alpha where
   maxBound = Alpha 'Z'
 
 instance Enum Alpha where
-  toEnum = toEnum
-  fromEnum = fromEnum
+  toEnum x = Alpha (toEnum x)
+  fromEnum (Alpha x) = fromEnum x
+  succ (Alpha x) = Alpha (succ x)
+  pred (Alpha x) = Alpha (pred x)
 
-readAlpha :: String -> Maybe Alpha
-readAlpha [x] = Just $ Alpha x
-readAlpha _ = Nothing
+allAlphas :: [Alpha]
+allAlphas = [minBound..maxBound]
+
+isAlpha :: Char -> Bool
+isAlpha = (`elem` ['A'..'Z'])
+
+readAlpha :: Char -> Maybe Alpha
+readAlpha x = if isAlpha x then Just (Alpha x) else Nothing
+
+readAlphas :: String -> Maybe [Alpha]
+readAlphas = mapM readAlpha
 
 readStatesCount :: String -> Maybe Int
 readStatesCount = readMaybe
@@ -29,45 +40,44 @@ readStatesCount = readMaybe
 readState :: String -> Maybe State
 readState = readMaybe
 
-flattenMaybe :: [Maybe a] -> Maybe [a]
-flattenMaybe l = foo l [] where
-  foo [] acc = Just $ reverse acc
-  foo (Nothing:_) _ = Nothing
-  foo (Just x : xs) acc = foo xs (x : acc)
-
+-- TODO: check if state is in the range
 readStates :: String -> Maybe [State]
-readStates l = do
-  states <- flattenMaybe $ map readState (words l)
-  Just states
+readStates l = mapM readState (words l)
 
 readInitStates :: String -> Maybe [State]
-readInitStates = readStates
+readInitStates = readMaybe
 
 readAcceptingStates :: String -> Maybe [State]
-readAcceptingStates = readStates
+readAcceptingStates = readMaybe
 
-
--- TODO: handle a case like this: 1 AB 1 (mutliple letters)
 readTransition :: String -> Maybe [(State, Alpha, [State])]
-readTransition l = do
-  (s:cs:dsts) <- Just $ words l
+readTransition ln = do
+  (s:cs:dsts) <- Just $ words ln
   state <- readState s
-  letters <- readAlpha cs
+  letters <- readAlphas cs
   destinationStates <- readStates $ unwords dsts
-  return [(state, letters, destinationStates)]
-
--- readSth :: String -> Maybe (String, String, [String])
--- readSth l = do
---   (a:b:cs) <- Just $ words l
---   return (a, b, cs)
+  return [(state, letter, destinationStates) | letter <- letters]
 
 readWord :: String -> Maybe String
 readWord [] = Nothing
 readWord w = Just w
 
--- runAuto :: [String] -> Maybe Bool
--- -- runAuto lines =
+runAuto :: String -> Maybe Bool
+runAuto input = do
+  (nos:inSt:accSt:trans) <- splitLines input
+  statesCount <- readStatesCount nos
+  inSt <- readInitStates inSt
+  accSt <- readAcceptingStates accSt
+  let (tr, word) = splitAtLast trans
+  let t = concat $ mapM (concat . readTransition) tr
+  let a = fromLists [1..statesCount] inSt accSt t
+  return $ accepts a word
 
+splitLines :: String -> Maybe [String]
+splitLines input = Just $ filter (not . null) (lines input)
+
+splitAtLast :: [a] -> ([a], [a])
+splitAtLast ls = let n = length ls in splitAt (n-1) ls
 
 -- main :: IO ()
 -- main = do
