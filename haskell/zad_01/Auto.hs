@@ -25,9 +25,8 @@ data Auto a q = A {
   transition  :: q -> a -> [q]
 }
 
-
 instance (Enum a, Bounded a, Show a, Show q) => Show (Auto a q) where
-  show aut = show $ toLists aut
+  show = show . toLists
 
 
 accepts :: Eq q => Auto a q -> [a] -> Bool
@@ -111,12 +110,14 @@ fromLists st initSt accSt trans = A {
   states = st,
   initStates = initSt,
   isAccepting = (`elem` accSt),
-  -- TODO: use Maybe monad
-  transition = \dst ch -> let f = find (\(s, c, _) -> s == dst && c == ch) trans in
-    case f of
-      Just (_, _, d) -> d
-      Nothing        -> []
+  transition = \dst ch -> case foo dst ch of  -- fromMaybe would make it more concise
+    Nothing -> []
+    Just l -> l
 }
+  where
+    foo dst ch = do
+      (_, _, d) <- find (\(s, c, _) -> s == dst && c == ch) trans
+      return d
 
 
 toLists :: (Enum a, Bounded a) => Auto a q -> ([q],[q],[q],[(q,a,[q])])
@@ -124,5 +125,8 @@ toLists (A st initSt isAcc trans) = (
     st,
     initSt,
     filter isAcc st,
-    [(src, ch, dst) | src <- st, ch <- [minBound..maxBound], let dst = trans src ch, not $ null dst]
+    [(src, ch, dst) | src <- st,
+                      ch <- [minBound..maxBound],
+                      let dst = trans src ch,
+                      not $ null dst]
   )
