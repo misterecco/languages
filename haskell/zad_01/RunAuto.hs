@@ -1,15 +1,8 @@
-module RunAuto where
-
 import           Auto
-import           Control.Monad
-import           Data.List          (find, nub)
 import           System.Environment
 import           Text.Read
 
-
--- TODO: try using liftM
--- TODO: better naming, formatting and styling
--- liftM :: (Monad m) => (a -> b) -> m a -> m b
+-- TODO: fix parsing of transition
 
 type State = Int
 
@@ -27,6 +20,7 @@ instance Enum Alpha where
   succ (Alpha x) = Alpha (succ x)
   pred (Alpha x) = Alpha (pred x)
 
+
 isAlpha :: Char -> Bool
 isAlpha = (`elem` ['A'..'Z'])
 
@@ -34,59 +28,56 @@ readAlpha :: Char -> Maybe Alpha
 readAlpha x = if isAlpha x then Just (Alpha x) else Nothing
 
 readAlphas :: String -> Maybe [Alpha]
-readAlphas = mapM readAlpha
+readAlphas [] = Nothing
+readAlphas alps = mapM readAlpha alps
 
 
-readStatesCount :: String -> Maybe Int
-readStatesCount = readMaybe
+readMaxState :: String -> Maybe Int
+readMaxState = readMaybe
 
 readState :: Int -> String -> Maybe State
-readState maxState x = do
-  s <- readMaybe x
+readState maxState st = do
+  state <- readMaybe st
   let allStates = [1..maxState]
-  if s `elem` allStates then return s else Nothing
+  if state `elem` allStates then return state else Nothing
 
 readStates :: Int -> String -> Maybe [State]
-readStates maxState l = mapM (readState maxState) (words l)
+readStates maxState st = mapM (readState maxState) (words st)
 
 readStatesList :: Int -> String -> Maybe [State]
-readStatesList maxState x = do
-  sl <- readMaybe x
+readStatesList maxState st = do
+  states <- readMaybe st
   let allStates = [1..maxState]
-  if all (`elem` allStates) sl then return sl else Nothing
-
-readAcceptingStates ::  String -> Maybe [State]
-readAcceptingStates = readMaybe
+  if all (`elem` allStates) states then return states else Nothing
 
 readTransition :: Int -> String -> Maybe [(State, Alpha, [State])]
 readTransition maxState ln = do
-  (s:cs:dsts) <- Just $ words ln
-  state <- readState maxState s
-  letters <- readAlphas cs
-  destinationStates <- readStates maxState $ unwords dsts
+  (st:chars:dests) <- Just $ words ln
+  state <- readState maxState st
+  letters <- readAlphas chars
+  destinationStates <- readStates maxState $ unwords dests
   return [(state, letter, destinationStates) | letter <- letters]
 
-readWord :: String -> Maybe [Alpha]
-readWord [] = Nothing
-readWord w  = if all (`elem` ['A'..'Z']) w then Just (fmap Alpha w) else Nothing
 
 runAuto :: String -> Maybe Bool
 runAuto input = do
-  (nos:inSt:accSt:trans) <- splitLines input
-  statesCount <- readStatesCount nos
-  initSt <- readStatesList statesCount inSt
-  acceptingSt <- readStatesList statesCount accSt
-  let (tr, [word]) = splitAtLast trans
-  let t = concat $ mapM (concat . readTransition statesCount) tr
-  let a = fromLists [1..statesCount] initSt acceptingSt t
-  aWord <- readWord word
-  return $ accepts a aWord
+  (maxSt:initSt:acceptSt:rest) <- splitLines input
+  maxState <- readMaxState maxSt
+  initialStates <- readStatesList maxState initSt
+  acceptingStates <- readStatesList maxState acceptSt
+  let (trans, [w]) = splitAtLast rest
+  let transitions = concat $ mapM (concat . readTransition maxState) trans
+  word <- readAlphas w
+  let auto = fromLists [1..maxState] initialStates acceptingStates transitions
+  return $ accepts auto word
+
 
 splitLines :: String -> Maybe [String]
 splitLines input = Just $ filter (not . null) (lines input)
 
 splitAtLast :: [a] -> ([a], [a])
-splitAtLast ls = let n = length ls in splitAt (n-1) ls
+splitAtLast ls = splitAt (n-1) ls
+  where n = length ls
 
 
 main :: IO ()
