@@ -12,11 +12,7 @@ module Auto
   toLists,
 ) where
 
-import           Data.List (find, nub)
-
--- TODO: better naming, formatting and styling
--- TODO: monadic syntax ?
-
+import           Data.List (nub)
 
 data Auto a q = A {
   states      :: [q],
@@ -33,8 +29,7 @@ accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts (A _ initSt isAcc trans) word = foo word uniqInitSt
   where
     uniqInitSt = nub initSt
-    foo _ []       = False
-    foo [] sts     = any isAcc sts
+    foo [] sts = any isAcc sts
     foo (c:cs) sts = foo cs (nub $ concatMap (`trans` c) sts)
 
 
@@ -93,16 +88,17 @@ thenA :: Auto a q1 -> Auto a q2 -> Auto a (Either q1 q2)
 thenA (A stL initStL isAccL transL) (A stR initStR isAccR transR) = A {
   states = map Left stL ++ map Right stR,
   initStates = map Left initStL ++ if any isAccL initStL
-                                     then map Right initStR
+                                     then initStRmapped
                                      else [],
   isAccepting = either (const False) isAccR,
   transition = \st ch -> case (st, ch) of
     (Left s, c) -> map Left transLSt ++ if any isAccL transLSt
-                                          then map Right initStR
+                                          then initStRmapped
                                           else []
-      where transLSt = transL s c
+                    where transLSt = transL s c
     (Right s, c) -> map Right $ transR s c
-}
+} where
+    initStRmapped = map Right initStR
 
 
 fromLists :: (Eq q, Eq a) => [q] -> [q] -> [q] -> [(q,a,[q])] -> Auto a q
@@ -110,14 +106,10 @@ fromLists st initSt accSt trans = A {
   states = st,
   initStates = initSt,
   isAccepting = (`elem` accSt),
-  transition = \dst ch -> case foo dst ch of  -- fromMaybe would make it more concise
-    Nothing -> []
-    Just l -> l
+  transition = \dst ch ->
+    let trList = filter (\(s, c, _) -> s == dst && c == ch) trans
+    in concatMap (\(_, _, d) -> d) trList
 }
-  where
-    foo dst ch = do
-      (_, _, d) <- find (\(s, c, _) -> s == dst && c == ch) trans
-      return d
 
 
 toLists :: (Enum a, Bounded a) => Auto a q -> ([q],[q],[q],[(q,a,[q])])

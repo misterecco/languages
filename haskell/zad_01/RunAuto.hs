@@ -1,11 +1,9 @@
 import           Auto
 import           System.Environment
+import           System.IO.Error
 import           Text.Read
 
--- TODO: fix parsing of transition
-
 type State = Int
-
 
 newtype Alpha = Alpha Char
   deriving (Eq, Show)
@@ -42,6 +40,7 @@ readState maxState st = do
   if state `elem` allStates then return state else Nothing
 
 readStates :: Int -> String -> Maybe [State]
+readStates _ [] = Nothing
 readStates maxState st = mapM (readState maxState) (words st)
 
 readStatesList :: Int -> String -> Maybe [State]
@@ -58,6 +57,12 @@ readTransition maxState ln = do
   destinationStates <- readStates maxState $ unwords dests
   return [(state, letter, destinationStates) | letter <- letters]
 
+readWord :: [String] -> Maybe [Alpha]
+readWord st =
+  if length st /= 1
+    then Nothing
+    else readAlphas $ head st
+
 
 runAuto :: String -> Maybe Bool
 runAuto input = do
@@ -65,9 +70,10 @@ runAuto input = do
   maxState <- readMaxState maxSt
   initialStates <- readStatesList maxState initSt
   acceptingStates <- readStatesList maxState acceptSt
-  let (trans, [w]) = splitAtLast rest
-  let transitions = concat $ mapM (concat . readTransition maxState) trans
-  word <- readAlphas w
+  (trans, w) <- splitAtLast rest
+  let transMapped = map (readTransition maxState) trans
+  transitions <- concat <$> sequence transMapped
+  word <- readWord w
   let auto = fromLists [1..maxState] initialStates acceptingStates transitions
   return $ accepts auto word
 
@@ -75,16 +81,33 @@ runAuto input = do
 splitLines :: String -> Maybe [String]
 splitLines input = Just $ filter (not . null) (lines input)
 
-splitAtLast :: [a] -> ([a], [a])
-splitAtLast ls = splitAt (n-1) ls
+splitAtLast :: [a] -> Maybe ([a], [a])
+splitAtLast [] = Nothing
+splitAtLast ls = Just $ splitAt (n-1) ls
   where n = length ls
 
 
-main :: IO ()
-main = do
-  (filename:_) <- getArgs
-  contents <- readFile filename
+processFile :: String -> IO ()
+processFile fileName = do
+  contents <- readFile fileName
   let result = runAuto contents
   case result of
     Nothing -> putStrLn "BAD INPUT"
     Just r  -> print r
+
+
+handler :: IOError -> IO ()
+handler e
+  | isDoesNotExistError e = case ioeGetFileName e of
+    Just path -> putStrLn $ "BAD INPUT (file " ++ path ++ " does not exist)"
+    Nothing -> putStrLn "BAD INPUT (file does not exist at unknown location!)"
+  | otherwise = ioError e
+
+
+main :: IO ()
+main = do
+  args <- getArgs
+  case length args of
+    0 -> print "BAD INPUT (file name not provided)"
+    1 -> processFile (head args) `catchIOError` handler
+    _ -> print "BAD INPUT (too many arguments)"
