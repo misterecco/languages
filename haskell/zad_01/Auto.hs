@@ -12,14 +12,17 @@ module Auto
   toLists,
 ) where
 
-import Data.List (nub, find)
+import           Data.List (find, nub)
+
+-- TODO: better naming, formatting and styling
+-- TODO: monadic syntax ?
 
 
 data Auto a q = A {
-  states :: [q],
-  initStates :: [q],
+  states      :: [q],
+  initStates  :: [q],
   isAccepting :: q -> Bool,
-  transition :: q -> a -> [q]
+  transition  :: q -> a -> [q]
 }
 
 
@@ -31,8 +34,8 @@ accepts :: Eq q => Auto a q -> [a] -> Bool
 accepts (A _ initSt isAcc trans) word = foo word uniqInitSt
   where
     uniqInitSt = nub initSt
-    foo _ [] = False
-    foo [] sts = any isAcc sts
+    foo _ []       = False
+    foo [] sts     = any isAcc sts
     foo (c:cs) sts = foo cs (nub $ concatMap (`trans` c) sts)
 
 
@@ -61,7 +64,7 @@ symA c = A {
   isAccepting = (== True),
   transition = \st ch -> case (st, ch) of
     (False, l) -> [True | l == c]
-    (_, _) -> []
+    (_, _)     -> []
 }
 
 
@@ -72,7 +75,7 @@ leftA (A st initSt isAcc trans) = A {
   isAccepting = either isAcc (const False),
   transition = \state ch -> case (state, ch) of
     (Left s, c) -> map Left $ trans s c
-    (_, _) -> []
+    (_, _)      -> []
 }
 
 
@@ -82,7 +85,7 @@ sumA (A stL initStL isAccL transL) (A stR initStR isAccR transR) = A {
   initStates = map Left initStL ++ map Right initStR,
   isAccepting = either isAccL isAccR,
   transition = \st ch -> case (st, ch) of
-    (Left s, c) -> map Left $ transL s c
+    (Left s, c)  -> map Left $ transL s c
     (Right s, c) -> map Right $ transR s c
 }
 
@@ -112,7 +115,7 @@ fromLists st initSt accSt trans = A {
   transition = \dst ch -> let f = find (\(s, c, _) -> s == dst && c == ch) trans in
     case f of
       Just (_, _, d) -> d
-      Nothing -> []
+      Nothing        -> []
 }
 
 

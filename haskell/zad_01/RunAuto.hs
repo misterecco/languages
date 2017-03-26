@@ -1,9 +1,11 @@
 module RunAuto where
 
-import Auto
-import System.Environment
-import Text.Read
--- import Control.Monad
+import           Control.Monad
+import           Data.List          (find, nub)
+import           System.Environment
+import           Text.Read
+import           Auto
+
 
 -- liftM :: (Monad m) => (a -> b) -> m a -> m b
 
@@ -58,20 +60,21 @@ readTransition ln = do
   destinationStates <- readStates $ unwords dsts
   return [(state, letter, destinationStates) | letter <- letters]
 
-readWord :: String -> Maybe String
+readWord :: String -> Maybe [Alpha]
 readWord [] = Nothing
-readWord w = Just w
+readWord w  = if all (`elem` ['A'..'Z']) w then Just (fmap Alpha w) else Nothing
 
 runAuto :: String -> Maybe Bool
 runAuto input = do
   (nos:inSt:accSt:trans) <- splitLines input
   statesCount <- readStatesCount nos
-  inSt <- readInitStates inSt
-  accSt <- readAcceptingStates accSt
-  let (tr, word) = splitAtLast trans
+  initSt <- readInitStates inSt
+  acceptingSt <- readAcceptingStates accSt
+  let (tr, [word]) = splitAtLast trans
   let t = concat $ mapM (concat . readTransition) tr
-  let a = fromLists [1..statesCount] inSt accSt t
-  return $ accepts a word
+  let a = fromLists [1..statesCount] initSt acceptingSt t
+  aWord <- readWord word
+  return $ accepts a aWord
 
 splitLines :: String -> Maybe [String]
 splitLines input = Just $ filter (not . null) (lines input)
@@ -79,7 +82,13 @@ splitLines input = Just $ filter (not . null) (lines input)
 splitAtLast :: [a] -> ([a], [a])
 splitAtLast ls = let n = length ls in splitAt (n-1) ls
 
--- main :: IO ()
--- main = do
---   (filename:args) <- getArgs
---   putStrLn $ "Reading from file named: " ++ filename
+
+main :: IO ()
+main = do
+  (filename:_) <- getArgs
+  putStrLn $ "Reading from file named: " ++ filename
+  contents <- readFile filename
+  let result = runAuto contents
+  case result of
+    Nothing -> putStrLn "BAD INPUT"
+    Just r  -> print r
