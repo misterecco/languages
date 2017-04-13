@@ -39,8 +39,33 @@ data Exp
 data Op = OpAdd | OpMul | OpSub
 
 evalExp :: Exp -> Int
--- TODO
-evalExp = const 0
+evalExp e = runReader (eval e) (const undefined)
 
--- eval :: Exp -> Reader Int (Exp)
--- eval
+eval :: Exp -> Reader (Var -> Maybe Int) Int
+eval (EInt x) = return x
+
+eval (EVar var) = do
+  env <- ask
+  case env var of
+    Nothing -> undefined
+    Just x -> return x
+
+eval (EOp op e1 e2) = do
+  x1 <- eval e1
+  x2 <- eval e2
+  case op of
+    OpAdd -> return (x1 + x2)
+    OpMul -> return (x1 * x2)
+    OpSub -> return (x1 - x2)
+
+eval (ELet var e1 e2) = do
+  x1 <- eval e1
+  local (\f x -> if x == var then Just x1 else f x) (eval e2)
+
+
+test :: Exp
+test = ELet "x" (ELet "y" (EOp OpAdd (EInt 6) (EInt 9))
+                      (EOp OpSub y (EInt 1)))
+                (EOp OpMul x (EInt 3))
+    where x = EVar "x"
+          y = EVar "y"

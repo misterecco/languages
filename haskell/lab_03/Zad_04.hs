@@ -1,8 +1,8 @@
-{-# LANGUAGE OverloadedString #-}
-import Data.String
-
+{-# LANGUAGE OverloadedStrings #-}
 
 module Zad_04 where
+
+import Data.String
 
 data Exp
   = EInt Int             -- stała całkowita

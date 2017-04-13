@@ -1,0 +1,44 @@
+-- file prolog.cf
+-- Author: Tomasz Kępa <tk359746@students.mimuw.edu.pl>
+-- LBNF for simplified prolog
+-- Based on SICStus Prolog User’s Manual (release 4.3.5)
+-- and https://github.com/BNFC/bnfc/blob/master/examples/C/C.cf
+
+entrypoints Program ;
+
+Prog. Program ::= [Sentence] ;
+
+separator nonempty Sentence "" ;
+
+
+-- coercions Term 12 ;
+
+rules Sentence ::= Clause | Directive | Query ;
+
+_. Clause ::= Rule ;
+_. Clause ::= Unit_clause ;
+
+rules Rule ::= Head ":-" Body ;
+rules Unit_clause ::= Head ;
+
+rules Directive ::= ":-" Body ;
+rules Query ::= "?-" Body ;
+rules Head ::= Goal ;
+
+rules Body ::= Body "->" Body ";" Body
+             | Body "->" Body
+             | "\+" Body
+             | Body "," Body
+             | Goal ;
+
+rules Goal ::= Term ;
+
+
+
+
+comment "/*" "*/" ;
+comment "%" ;
+
+
+-- (:[]). [Sentence] ::= Sentence ;
+-- (:).   [Sentence] ::= Sentence [Sentence] ;
