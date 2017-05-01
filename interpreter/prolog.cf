@@ -22,11 +22,15 @@ rules Directive ::= ":-" Body ;
 rules Query ::= "?-" Body ;
 rules Head ::= Goal ;
 
-rules Body ::= Body "->" Body ";" Body
-             | Body "->" Body
-             | "\\+" Body
-             | Body "," Body
-             | Goal ;
+rules Body ::= | "\\+" Body2
+               | Body1 "," Body
+               | "if" "(" Body1 "," Body1 "," Body1 ")" ;
+
+_. Body ::= Body2 ;
+_. Body2 ::= Body1 ;
+_. Body1 ::= Body0 ;
+
+rules Body0 ::= Goal ;
 
 rules Goal ::= Term ;
 
@@ -65,7 +69,7 @@ rules Term4 ::= Term4 "*" Term3
 
 rules Term2 ::= "-" Term2 ;
 
-rules Term0 ::= Functor "(" [Argument] ")"
+rules Term0 ::= Functoor "(" [Argument] ")"
              | "(" Term12 ")"
              | List
              | String
@@ -90,14 +94,14 @@ rules Number ::= Integer ;
 
 rules Atom ::= Name ;
 
-rules Functor ::= Name ;
+rules Functoor ::= Name ;
 
-rules Name ::= Word ;  -- TODO: add more options here
+rules Name ::= Woord ;  -- TODO: add more options here
 
 token Variable ('_' (letter | digit | '_')*)
              | (upper (letter | digit | '_')*) ;
 
-token Word (lower (letter | digit | '_')*) ;
+token Woord (lower (letter | digit | '_')*) ;
 
 comment "/*" "*/" ;
 comment "%" ;
