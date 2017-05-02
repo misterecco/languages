@@ -1,0 +1,12 @@
+name:           TestPackage
+version:        0.0
+synopsis:       Small package with two programs
+author:         Angela Author
+license:        BSD3
+build-type:     Simple
+cabal-version:  >= 1.2
+
+executable interpreter
+  build-depends:  base, array, mtl, containers
+  main-is:        Interpreter.hs
+  hs-source-dirs: out

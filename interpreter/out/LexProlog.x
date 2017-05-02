@@ -21,7 +21,7 @@ $i = [$l $d _ ']          -- identifier character
 $u = [\0-\255]          -- universal: any character
 
 @rsyms =    -- symbols and non-identifier-like reserved words
-   \. | \: \- | \? \- | \\ \+ | \, | \( | \) | \= | \\ \= | \= \= | \\ \= \= | \= \: \= | \= \\ \= | \< | \> | \= \< | \> \= | \+ | \- | \* | \/ | \[ | \] | \|
+   \. | \: \- | \? \- | \( | \) | \, | \\ \+ | \= | \\ \= | \= \= | \\ \= \= | \= \: \= | \= \\ \= | \< | \> | \= \< | \> \= | \+ | \- | \* | \/ | \[ | \] | \|
 
 :-
 "%" [.]* ; -- Toss single line comments
@@ -29,8 +29,8 @@ $u = [\0-\255]          -- universal: any character
 
 $white+ ;
 @rsyms { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
+$s ($l | $d | \_)* { tok (\p s -> PT p (eitherResIdent (T_Name . share) s)) }
 \_ ($l | $d | \_)* | $c ($l | $d | \_)* { tok (\p s -> PT p (eitherResIdent (T_Variable . share) s)) }
-$s ($l | $d | \_)* { tok (\p s -> PT p (eitherResIdent (T_Woord . share) s)) }
 
 $l $i*   { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
 \" ([$u # [\" \\ \n]] | (\\ (\" | \\ | \' | n | t)))* \"{ tok (\p s -> PT p (TL $ share $ unescapeInitTail s)) }
@@ -53,8 +53,8 @@ data Tok =
  | TV !String         -- identifiers
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
+ | T_Name !String
  | T_Variable !String
- | T_Woord !String
 
  deriving (Eq,Show,Ord)
 
@@ -89,8 +89,8 @@ prToken t = case t of
   PT _ (TV s)   -> s
   PT _ (TD s)   -> s
   PT _ (TC s)   -> s
+  PT _ (T_Name s) -> s
   PT _ (T_Variable s) -> s
-  PT _ (T_Woord s) -> s
 
 
 data BTree = N | B String Tok BTree BTree deriving (Show)
@@ -104,7 +104,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "==" 14 (b "." 7 (b "+" 4 (b ")" 2 (b "(" 1 N N) (b "*" 3 N N)) (b "-" 6 (b "," 5 N N) N)) (b "=" 11 (b ":-" 9 (b "/" 8 N N) (b "<" 10 N N)) (b "=<" 13 (b "=:=" 12 N N) N))) (b "\\=" 21 (b "?-" 18 (b ">" 16 (b "=\\=" 15 N N) (b ">=" 17 N N)) (b "\\+" 20 (b "[" 19 N N) N)) (b "is" 25 (b "]" 23 (b "\\==" 22 N N) (b "if" 24 N N)) (b "|" 27 (b "mod" 26 N N) N)))
+resWords = b "==" 14 (b "." 7 (b "+" 4 (b ")" 2 (b "(" 1 N N) (b "*" 3 N N)) (b "-" 6 (b "," 5 N N) N)) (b "=" 11 (b ":-" 9 (b "/" 8 N N) (b "<" 10 N N)) (b "=<" 13 (b "=:=" 12 N N) N))) (b "\\=" 21 (b "?-" 18 (b ">" 16 (b "=\\=" 15 N N) (b ">=" 17 N N)) (b "\\+" 20 (b "[" 19 N N) N)) (b "is" 24 (b "]" 23 (b "\\==" 22 N N) N) (b "|" 26 (b "mod" 25 N N) N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

@@ -79,12 +79,12 @@ instance Print Double where
 
 
 
+instance Print Name where
+  prt _ (Name i) = doc (showString ( i))
+
+
 instance Print Variable where
   prt _ (Variable i) = doc (showString ( i))
-
-
-instance Print Woord where
-  prt _ (Woord i) = doc (showString ( i))
 
 
 
@@ -95,108 +95,57 @@ instance Print Program where
 instance Print Sentence where
   prt i e = case e of
     SentenceClause clause -> prPrec i 0 (concatD [prt 0 clause])
-    SentenceDirective directive -> prPrec i 0 (concatD [prt 0 directive])
-    SentenceQuery query -> prPrec i 0 (concatD [prt 0 query])
+    Directive term -> prPrec i 0 (concatD [doc (showString ":-"), prt 0 term])
+    Query term -> prPrec i 0 (concatD [doc (showString "?-"), prt 0 term])
   prtList _ [x] = (concatD [prt 0 x, doc (showString ".")])
   prtList _ (x:xs) = (concatD [prt 0 x, doc (showString "."), prt 0 xs])
 instance Print Clause where
   prt i e = case e of
-    ClauseRule rule -> prPrec i 0 (concatD [prt 0 rule])
-    ClauseUnit_clause unitclause -> prPrec i 0 (concatD [prt 0 unitclause])
-
-instance Print Rule where
-  prt i e = case e of
-    Rule1 head body -> prPrec i 0 (concatD [prt 0 head, doc (showString ":-"), prt 0 body])
-
-instance Print Unit_clause where
-  prt i e = case e of
-    Unit_clauseHead head -> prPrec i 0 (concatD [prt 0 head])
-
-instance Print Directive where
-  prt i e = case e of
-    Directive1 body -> prPrec i 0 (concatD [doc (showString ":-"), prt 0 body])
-
-instance Print Query where
-  prt i e = case e of
-    Query1 body -> prPrec i 0 (concatD [doc (showString "?-"), prt 0 body])
-
-instance Print Head where
-  prt i e = case e of
-    HeadGoal goal -> prPrec i 0 (concatD [prt 0 goal])
-
-instance Print Body where
-  prt i e = case e of
-    Body1 -> prPrec i 0 (concatD [])
-    Body2 body -> prPrec i 0 (concatD [doc (showString "\\+"), prt 2 body])
-    Body3 body1 body2 -> prPrec i 0 (concatD [prt 1 body1, doc (showString ","), prt 0 body2])
-    Body4 body1 body2 body3 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 1 body1, doc (showString ","), prt 1 body2, doc (showString ","), prt 1 body3, doc (showString ")")])
-    Body0Goal goal -> prPrec i 0 (concatD [prt 0 goal])
-
-instance Print Goal where
-  prt i e = case e of
-    GoalTerm term -> prPrec i 0 (concatD [prt 0 term])
+    Rule term1 term2 -> prPrec i 0 (concatD [prt 0 term1, doc (showString ":-"), prt 0 term2])
+    UnitClause term -> prPrec i 0 (concatD [prt 0 term])
 
 instance Print Term where
   prt i e = case e of
-    Term71 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "="), prt 6 term2])
-    Term72 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "\\="), prt 6 term2])
-    Term73 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=="), prt 6 term2])
-    Term74 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "\\=="), prt 6 term2])
-    Term75 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "is"), prt 6 term2])
-    Term76 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=:="), prt 6 term2])
-    Term77 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=\\="), prt 6 term2])
-    Term78 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "<"), prt 6 term2])
-    Term79 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString ">"), prt 6 term2])
-    Term710 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=<"), prt 6 term2])
-    Term711 term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString ">="), prt 6 term2])
-    Term51 term1 term2 -> prPrec i 5 (concatD [prt 5 term1, doc (showString "+"), prt 4 term2])
-    Term52 term1 term2 -> prPrec i 5 (concatD [prt 5 term1, doc (showString "-"), prt 4 term2])
-    Term41 term1 term2 -> prPrec i 4 (concatD [prt 4 term1, doc (showString "*"), prt 3 term2])
-    Term42 term1 term2 -> prPrec i 4 (concatD [prt 4 term1, doc (showString "/"), prt 3 term2])
-    Term43 term1 term2 -> prPrec i 4 (concatD [prt 4 term1, doc (showString "mod"), prt 3 term2])
-    Term21 term -> prPrec i 2 (concatD [doc (showString "-"), prt 2 term])
-    Term01 functoor arguments -> prPrec i 0 (concatD [prt 0 functoor, doc (showString "("), prt 0 arguments, doc (showString ")")])
-    Term02 term -> prPrec i 0 (concatD [doc (showString "("), prt 12 term, doc (showString ")")])
-    Term0List list -> prPrec i 0 (concatD [prt 0 list])
-    Term0String str -> prPrec i 0 (concatD [prt 0 str])
-    Term0Constant constant -> prPrec i 0 (concatD [prt 0 constant])
-    Term0Variable variable -> prPrec i 0 (concatD [prt 0 variable])
+    OpSequence term1 term2 -> prPrec i 10 (concatD [prt 9 term1, doc (showString ","), prt 10 term2])
+    OpNegate term -> prPrec i 9 (concatD [doc (showString "\\+"), prt 9 term])
+    OpUnifies term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "="), prt 6 term2])
+    OpNotUnifies term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "\\="), prt 6 term2])
+    OpEqual term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=="), prt 6 term2])
+    OpNotEqual term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "\\=="), prt 6 term2])
+    OpArIs term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "is"), prt 6 term2])
+    OpArEqual term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=:="), prt 6 term2])
+    OpArNotEqual term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=\\="), prt 6 term2])
+    OpArLt term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "<"), prt 6 term2])
+    OpArGt term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString ">"), prt 6 term2])
+    OpArLte term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "=<"), prt 6 term2])
+    OpArGte term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString ">="), prt 6 term2])
+    OpArAdd term1 term2 -> prPrec i 5 (concatD [prt 5 term1, doc (showString "+"), prt 4 term2])
+    OpArSub term1 term2 -> prPrec i 5 (concatD [prt 5 term1, doc (showString "-"), prt 4 term2])
+    OpArMul term1 term2 -> prPrec i 4 (concatD [prt 4 term1, doc (showString "*"), prt 3 term2])
+    OpArDiv term1 term2 -> prPrec i 4 (concatD [prt 4 term1, doc (showString "/"), prt 3 term2])
+    OpArMod term1 term2 -> prPrec i 4 (concatD [prt 4 term1, doc (showString "mod"), prt 3 term2])
+    OpArNeg term -> prPrec i 2 (concatD [doc (showString "-"), prt 2 term])
+    Funct name terms -> prPrec i 0 (concatD [prt 0 name, doc (showString "("), prt 9 terms, doc (showString ")")])
+    Var variable -> prPrec i 0 (concatD [prt 0 variable])
+    Const constant -> prPrec i 0 (concatD [prt 0 constant])
+    List lst -> prPrec i 0 (concatD [prt 0 lst])
+  prtList 9 [x] = (concatD [prt 9 x])
+  prtList 9 (x:xs) = (concatD [prt 9 x, doc (showString ","), prt 9 xs])
+instance Print Lst where
+  prt i e = case e of
+    ListEmpty -> prPrec i 0 (concatD [doc (showString "["), doc (showString "]")])
+    ListNonEmpty listexpr -> prPrec i 0 (concatD [doc (showString "["), prt 0 listexpr, doc (showString "]")])
+    ListChar str -> prPrec i 0 (concatD [prt 0 str])
 
-instance Print Argument where
+instance Print ListExpr where
   prt i e = case e of
-    ArgumentTerm9 term -> prPrec i 0 (concatD [prt 9 term])
-  prtList _ [x] = (concatD [prt 0 x])
-  prtList _ (x:xs) = (concatD [prt 0 x, doc (showString ","), prt 0 xs])
-instance Print List where
-  prt i e = case e of
-    List1 -> prPrec i 0 (concatD [doc (showString "["), doc (showString "]")])
-    List2 listexpr -> prPrec i 0 (concatD [doc (showString "["), prt 0 listexpr, doc (showString "]")])
-
-instance Print List_Expr where
-  prt i e = case e of
-    List_ExprTerm9 term -> prPrec i 0 (concatD [prt 9 term])
-    List_Expr1 term listexpr -> prPrec i 0 (concatD [prt 9 term, doc (showString ","), prt 0 listexpr])
-    List_Expr2 term1 term2 -> prPrec i 0 (concatD [prt 9 term1, doc (showString "|"), prt 9 term2])
+    LESingle term -> prPrec i 0 (concatD [prt 9 term])
+    LESeq term listexpr -> prPrec i 0 (concatD [prt 9 term, doc (showString ","), prt 0 listexpr])
+    LEHead term1 term2 -> prPrec i 0 (concatD [prt 9 term1, doc (showString "|"), prt 9 term2])
 
 instance Print Constant where
   prt i e = case e of
-    ConstantAtom atom -> prPrec i 0 (concatD [prt 0 atom])
-    ConstantNumber number -> prPrec i 0 (concatD [prt 0 number])
-
-instance Print Number where
-  prt i e = case e of
-    NumberInteger n -> prPrec i 0 (concatD [prt 0 n])
-
-instance Print Atom where
-  prt i e = case e of
-    AtomName name -> prPrec i 0 (concatD [prt 0 name])
-
-instance Print Functoor where
-  prt i e = case e of
-    FunctoorName name -> prPrec i 0 (concatD [prt 0 name])
-
-instance Print Name where
-  prt i e = case e of
-    NameWoord woord -> prPrec i 0 (concatD [prt 0 woord])
+    Number n -> prPrec i 0 (concatD [prt 0 n])
+    Atom name -> prPrec i 0 (concatD [prt 0 name])
 
 

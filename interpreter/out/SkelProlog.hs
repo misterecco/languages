@@ -9,100 +9,61 @@ type Result = Err String
 failure :: Show a => a -> Result
 failure x = Bad $ "Undefined case: " ++ show x
 
+transName :: Name -> Result
+transName x = case x of
+  Name string -> failure x
 transVariable :: Variable -> Result
 transVariable x = case x of
   Variable string -> failure x
-transWoord :: Woord -> Result
-transWoord x = case x of
-  Woord string -> failure x
 transProgram :: Program -> Result
 transProgram x = case x of
   Program1 sentences -> failure x
 transSentence :: Sentence -> Result
 transSentence x = case x of
   SentenceClause clause -> failure x
-  SentenceDirective directive -> failure x
-  SentenceQuery query -> failure x
+  Directive term -> failure x
+  Query term -> failure x
 transClause :: Clause -> Result
 transClause x = case x of
-  ClauseRule rule -> failure x
-  ClauseUnit_clause unitclause -> failure x
-transRule :: Rule -> Result
-transRule x = case x of
-  Rule1 head body -> failure x
-transUnit_clause :: Unit_clause -> Result
-transUnit_clause x = case x of
-  Unit_clauseHead head -> failure x
-transDirective :: Directive -> Result
-transDirective x = case x of
-  Directive1 body -> failure x
-transQuery :: Query -> Result
-transQuery x = case x of
-  Query1 body -> failure x
-transHead :: Head -> Result
-transHead x = case x of
-  HeadGoal goal -> failure x
-transBody :: Body -> Result
-transBody x = case x of
-  Body1 -> failure x
-  Body2 body -> failure x
-  Body3 body1 body2 -> failure x
-  Body4 body1 body2 body3 -> failure x
-  Body0Goal goal -> failure x
-transGoal :: Goal -> Result
-transGoal x = case x of
-  GoalTerm term -> failure x
+  Rule term1 term2 -> failure x
+  UnitClause term -> failure x
 transTerm :: Term -> Result
 transTerm x = case x of
-  Term71 term1 term2 -> failure x
-  Term72 term1 term2 -> failure x
-  Term73 term1 term2 -> failure x
-  Term74 term1 term2 -> failure x
-  Term75 term1 term2 -> failure x
-  Term76 term1 term2 -> failure x
-  Term77 term1 term2 -> failure x
-  Term78 term1 term2 -> failure x
-  Term79 term1 term2 -> failure x
-  Term710 term1 term2 -> failure x
-  Term711 term1 term2 -> failure x
-  Term51 term1 term2 -> failure x
-  Term52 term1 term2 -> failure x
-  Term41 term1 term2 -> failure x
-  Term42 term1 term2 -> failure x
-  Term43 term1 term2 -> failure x
-  Term21 term -> failure x
-  Term01 functoor arguments -> failure x
-  Term02 term -> failure x
-  Term0List list -> failure x
-  Term0String string -> failure x
-  Term0Constant constant -> failure x
-  Term0Variable variable -> failure x
-transArgument :: Argument -> Result
-transArgument x = case x of
-  ArgumentTerm9 term -> failure x
-transList :: List -> Result
-transList x = case x of
-  List1 -> failure x
-  List2 listexpr -> failure x
-transList_Expr :: List_Expr -> Result
-transList_Expr x = case x of
-  List_ExprTerm9 term -> failure x
-  List_Expr1 term listexpr -> failure x
-  List_Expr2 term1 term2 -> failure x
+  OpSequence term1 term2 -> failure x
+  OpNegate term -> failure x
+  OpUnifies term1 term2 -> failure x
+  OpNotUnifies term1 term2 -> failure x
+  OpEqual term1 term2 -> failure x
+  OpNotEqual term1 term2 -> failure x
+  OpArIs term1 term2 -> failure x
+  OpArEqual term1 term2 -> failure x
+  OpArNotEqual term1 term2 -> failure x
+  OpArLt term1 term2 -> failure x
+  OpArGt term1 term2 -> failure x
+  OpArLte term1 term2 -> failure x
+  OpArGte term1 term2 -> failure x
+  OpArAdd term1 term2 -> failure x
+  OpArSub term1 term2 -> failure x
+  OpArMul term1 term2 -> failure x
+  OpArDiv term1 term2 -> failure x
+  OpArMod term1 term2 -> failure x
+  OpArNeg term -> failure x
+  Funct name terms -> failure x
+  Var variable -> failure x
+  Const constant -> failure x
+  List lst -> failure x
+transLst :: Lst -> Result
+transLst x = case x of
+  ListEmpty -> failure x
+  ListNonEmpty listexpr -> failure x
+  ListChar string -> failure x
+transListExpr :: ListExpr -> Result
+transListExpr x = case x of
+  LESingle term -> failure x
+  LESeq term listexpr -> failure x
+  LEHead term1 term2 -> failure x
 transConstant :: Constant -> Result
 transConstant x = case x of
-  ConstantAtom atom -> failure x
-  ConstantNumber number -> failure x
-transNumber :: Number -> Result
-transNumber x = case x of
-  NumberInteger integer -> failure x
-transAtom :: Atom -> Result
-transAtom x = case x of
-  AtomName name -> failure x
-transFunctoor :: Functoor -> Result
-transFunctoor x = case x of
-  FunctoorName name -> failure x
-transName :: Name -> Result
-transName x = case x of
-  NameWoord woord -> failure x
+  Number integer -> failure x
+  Atom name -> failure x
 

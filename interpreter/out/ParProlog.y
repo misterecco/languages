@@ -36,23 +36,22 @@ import ErrM
   '\\=' { PT _ (TS _ 21) }
   '\\==' { PT _ (TS _ 22) }
   ']' { PT _ (TS _ 23) }
-  'if' { PT _ (TS _ 24) }
-  'is' { PT _ (TS _ 25) }
-  'mod' { PT _ (TS _ 26) }
-  '|' { PT _ (TS _ 27) }
+  'is' { PT _ (TS _ 24) }
+  'mod' { PT _ (TS _ 25) }
+  '|' { PT _ (TS _ 26) }
 
 L_quoted { PT _ (TL $$) }
 L_integ  { PT _ (TI $$) }
+L_Name { PT _ (T_Name $$) }
 L_Variable { PT _ (T_Variable $$) }
-L_Woord { PT _ (T_Woord $$) }
 
 
 %%
 
 String  :: { String }  : L_quoted {  $1 }
 Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
+Name    :: { Name} : L_Name { Name ($1)}
 Variable    :: { Variable} : L_Variable { Variable ($1)}
-Woord    :: { Woord} : L_Woord { Woord ($1)}
 
 Program :: { Program }
 Program : ListSentence { AbsProlog.Program1 $1 }
@@ -61,35 +60,11 @@ ListSentence : Sentence '.' { (:[]) $1 }
              | Sentence '.' ListSentence { (:) $1 $3 }
 Sentence :: { Sentence }
 Sentence : Clause { AbsProlog.SentenceClause $1 }
-         | Directive { AbsProlog.SentenceDirective $1 }
-         | Query { AbsProlog.SentenceQuery $1 }
+         | ':-' Term { AbsProlog.Directive $2 }
+         | '?-' Term { AbsProlog.Query $2 }
 Clause :: { Clause }
-Clause : Rule { AbsProlog.ClauseRule $1 }
-       | Unit_clause { AbsProlog.ClauseUnit_clause $1 }
-Rule :: { Rule }
-Rule : Head ':-' Body { AbsProlog.Rule1 $1 $3 }
-Unit_clause :: { Unit_clause }
-Unit_clause : Head { AbsProlog.Unit_clauseHead $1 }
-Directive :: { Directive }
-Directive : ':-' Body { AbsProlog.Directive1 $2 }
-Query :: { Query }
-Query : '?-' Body { AbsProlog.Query1 $2 }
-Head :: { Head }
-Head : Goal { AbsProlog.HeadGoal $1 }
-Body :: { Body }
-Body : {- empty -} { AbsProlog.Body1 }
-     | '\\+' Body2 { AbsProlog.Body2 $2 }
-     | Body1 ',' Body { AbsProlog.Body3 $1 $3 }
-     | 'if' '(' Body1 ',' Body1 ',' Body1 ')' { AbsProlog.Body4 $3 $5 $7 }
-     | Body2 { $1 }
-Body2 :: { Body }
-Body2 : Body1 { $1 }
-Body1 :: { Body }
-Body1 : Body0 { $1 }
-Body0 :: { Body }
-Body0 : Goal { AbsProlog.Body0Goal $1 }
-Goal :: { Goal }
-Goal : Term { AbsProlog.GoalTerm $1 }
+Clause : Term ':-' Term { AbsProlog.Rule $1 $3 }
+       | Term { AbsProlog.UnitClause $1 }
 Term :: { Term }
 Term : Term12 { $1 }
 Term12 :: { Term }
@@ -98,70 +73,60 @@ Term11 :: { Term }
 Term11 : Term10 { $1 }
 Term10 :: { Term }
 Term10 : Term9 { $1 }
+       | Term9 ',' Term10 { AbsProlog.OpSequence $1 $3 }
 Term9 :: { Term }
-Term9 : Term8 { $1 }
+Term9 : Term8 { $1 } | '\\+' Term9 { AbsProlog.OpNegate $2 }
 Term8 :: { Term }
 Term8 : Term7 { $1 }
 Term7 :: { Term }
 Term7 : Term6 { $1 }
-      | Term6 '=' Term6 { AbsProlog.Term71 $1 $3 }
-      | Term6 '\\=' Term6 { AbsProlog.Term72 $1 $3 }
-      | Term6 '==' Term6 { AbsProlog.Term73 $1 $3 }
-      | Term6 '\\==' Term6 { AbsProlog.Term74 $1 $3 }
-      | Term6 'is' Term6 { AbsProlog.Term75 $1 $3 }
-      | Term6 '=:=' Term6 { AbsProlog.Term76 $1 $3 }
-      | Term6 '=\\=' Term6 { AbsProlog.Term77 $1 $3 }
-      | Term6 '<' Term6 { AbsProlog.Term78 $1 $3 }
-      | Term6 '>' Term6 { AbsProlog.Term79 $1 $3 }
-      | Term6 '=<' Term6 { AbsProlog.Term710 $1 $3 }
-      | Term6 '>=' Term6 { AbsProlog.Term711 $1 $3 }
+      | Term6 '=' Term6 { AbsProlog.OpUnifies $1 $3 }
+      | Term6 '\\=' Term6 { AbsProlog.OpNotUnifies $1 $3 }
+      | Term6 '==' Term6 { AbsProlog.OpEqual $1 $3 }
+      | Term6 '\\==' Term6 { AbsProlog.OpNotEqual $1 $3 }
+      | Term6 'is' Term6 { AbsProlog.OpArIs $1 $3 }
+      | Term6 '=:=' Term6 { AbsProlog.OpArEqual $1 $3 }
+      | Term6 '=\\=' Term6 { AbsProlog.OpArNotEqual $1 $3 }
+      | Term6 '<' Term6 { AbsProlog.OpArLt $1 $3 }
+      | Term6 '>' Term6 { AbsProlog.OpArGt $1 $3 }
+      | Term6 '=<' Term6 { AbsProlog.OpArLte $1 $3 }
+      | Term6 '>=' Term6 { AbsProlog.OpArGte $1 $3 }
 Term6 :: { Term }
 Term6 : Term5 { $1 }
 Term5 :: { Term }
 Term5 : Term4 { $1 }
-      | Term5 '+' Term4 { AbsProlog.Term51 $1 $3 }
-      | Term5 '-' Term4 { AbsProlog.Term52 $1 $3 }
+      | Term5 '+' Term4 { AbsProlog.OpArAdd $1 $3 }
+      | Term5 '-' Term4 { AbsProlog.OpArSub $1 $3 }
 Term4 :: { Term }
 Term4 : Term3 { $1 }
-      | Term4 '*' Term3 { AbsProlog.Term41 $1 $3 }
-      | Term4 '/' Term3 { AbsProlog.Term42 $1 $3 }
-      | Term4 'mod' Term3 { AbsProlog.Term43 $1 $3 }
+      | Term4 '*' Term3 { AbsProlog.OpArMul $1 $3 }
+      | Term4 '/' Term3 { AbsProlog.OpArDiv $1 $3 }
+      | Term4 'mod' Term3 { AbsProlog.OpArMod $1 $3 }
 Term3 :: { Term }
 Term3 : Term2 { $1 }
 Term2 :: { Term }
-Term2 : Term1 { $1 } | '-' Term2 { AbsProlog.Term21 $2 }
+Term2 : Term1 { $1 } | '-' Term2 { AbsProlog.OpArNeg $2 }
 Term1 :: { Term }
 Term1 : Term0 { $1 }
 Term0 :: { Term }
-Term0 : Functoor '(' ListArgument ')' { AbsProlog.Term01 $1 $3 }
-      | '(' Term12 ')' { AbsProlog.Term02 $2 }
-      | List { AbsProlog.Term0List $1 }
-      | String { AbsProlog.Term0String $1 }
-      | Constant { AbsProlog.Term0Constant $1 }
-      | Variable { AbsProlog.Term0Variable $1 }
-ListArgument :: { [Argument] }
-ListArgument : Argument { (:[]) $1 }
-             | Argument ',' ListArgument { (:) $1 $3 }
-Argument :: { Argument }
-Argument : Term9 { AbsProlog.ArgumentTerm9 $1 }
-List :: { List }
-List : '[' ']' { AbsProlog.List1 }
-     | '[' List_Expr ']' { AbsProlog.List2 $2 }
-List_Expr :: { List_Expr }
-List_Expr : Term9 { AbsProlog.List_ExprTerm9 $1 }
-          | Term9 ',' List_Expr { AbsProlog.List_Expr1 $1 $3 }
-          | Term9 '|' Term9 { AbsProlog.List_Expr2 $1 $3 }
+Term0 : '(' Term12 ')' { $2 }
+      | Name '(' ListTerm9 ')' { AbsProlog.Funct $1 $3 }
+      | Variable { AbsProlog.Var $1 }
+      | Constant { AbsProlog.Const $1 }
+      | Lst { AbsProlog.List $1 }
+ListTerm9 :: { [Term] }
+ListTerm9 : Term9 { (:[]) $1 } | Term9 ',' ListTerm9 { (:) $1 $3 }
+Lst :: { Lst }
+Lst : '[' ']' { AbsProlog.ListEmpty }
+    | '[' ListExpr ']' { AbsProlog.ListNonEmpty $2 }
+    | String { AbsProlog.ListChar $1 }
+ListExpr :: { ListExpr }
+ListExpr : Term9 { AbsProlog.LESingle $1 }
+         | Term9 ',' ListExpr { AbsProlog.LESeq $1 $3 }
+         | Term9 '|' Term9 { AbsProlog.LEHead $1 $3 }
 Constant :: { Constant }
-Constant : Atom { AbsProlog.ConstantAtom $1 }
-         | Number { AbsProlog.ConstantNumber $1 }
-Number :: { Number }
-Number : Integer { AbsProlog.NumberInteger $1 }
-Atom :: { Atom }
-Atom : Name { AbsProlog.AtomName $1 }
-Functoor :: { Functoor }
-Functoor : Name { AbsProlog.FunctoorName $1 }
-Name :: { Name }
-Name : Woord { AbsProlog.NameWoord $1 }
+Constant : Integer { AbsProlog.Number $1 }
+         | Name { AbsProlog.Atom $1 }
 {
 
 returnM :: a -> Err a

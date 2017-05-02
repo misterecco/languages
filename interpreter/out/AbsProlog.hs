@@ -7,96 +7,50 @@ module AbsProlog where
 
 
 
+newtype Name = Name String deriving (Eq, Ord, Show, Read)
 newtype Variable = Variable String deriving (Eq, Ord, Show, Read)
-newtype Woord = Woord String deriving (Eq, Ord, Show, Read)
 data Program = Program1 [Sentence]
   deriving (Eq, Ord, Show, Read)
 
-data Sentence
-    = SentenceClause Clause
-    | SentenceDirective Directive
-    | SentenceQuery Query
+data Sentence = SentenceClause Clause | Directive Term | Query Term
   deriving (Eq, Ord, Show, Read)
 
-data Clause = ClauseRule Rule | ClauseUnit_clause Unit_clause
-  deriving (Eq, Ord, Show, Read)
-
-data Rule = Rule1 Head Body
-  deriving (Eq, Ord, Show, Read)
-
-data Unit_clause = Unit_clauseHead Head
-  deriving (Eq, Ord, Show, Read)
-
-data Directive = Directive1 Body
-  deriving (Eq, Ord, Show, Read)
-
-data Query = Query1 Body
-  deriving (Eq, Ord, Show, Read)
-
-data Head = HeadGoal Goal
-  deriving (Eq, Ord, Show, Read)
-
-data Body
-    = Body1
-    | Body2 Body
-    | Body3 Body Body
-    | Body4 Body Body Body
-    | Body0Goal Goal
-  deriving (Eq, Ord, Show, Read)
-
-data Goal = GoalTerm Term
+data Clause = Rule Term Term | UnitClause Term
   deriving (Eq, Ord, Show, Read)
 
 data Term
-    = Term71 Term Term
-    | Term72 Term Term
-    | Term73 Term Term
-    | Term74 Term Term
-    | Term75 Term Term
-    | Term76 Term Term
-    | Term77 Term Term
-    | Term78 Term Term
-    | Term79 Term Term
-    | Term710 Term Term
-    | Term711 Term Term
-    | Term51 Term Term
-    | Term52 Term Term
-    | Term41 Term Term
-    | Term42 Term Term
-    | Term43 Term Term
-    | Term21 Term
-    | Term01 Functoor [Argument]
-    | Term02 Term
-    | Term0List List
-    | Term0String String
-    | Term0Constant Constant
-    | Term0Variable Variable
+    = OpSequence Term Term
+    | OpNegate Term
+    | OpUnifies Term Term
+    | OpNotUnifies Term Term
+    | OpEqual Term Term
+    | OpNotEqual Term Term
+    | OpArIs Term Term
+    | OpArEqual Term Term
+    | OpArNotEqual Term Term
+    | OpArLt Term Term
+    | OpArGt Term Term
+    | OpArLte Term Term
+    | OpArGte Term Term
+    | OpArAdd Term Term
+    | OpArSub Term Term
+    | OpArMul Term Term
+    | OpArDiv Term Term
+    | OpArMod Term Term
+    | OpArNeg Term
+    | Funct Name [Term]
+    | Var Variable
+    | Const Constant
+    | List Lst
   deriving (Eq, Ord, Show, Read)
 
-data Argument = ArgumentTerm9 Term
+data Lst = ListEmpty | ListNonEmpty ListExpr | ListChar String
   deriving (Eq, Ord, Show, Read)
 
-data List = List1 | List2 List_Expr
+data ListExpr
+    = LESingle Term | LESeq Term ListExpr | LEHead Term Term
   deriving (Eq, Ord, Show, Read)
 
-data List_Expr
-    = List_ExprTerm9 Term
-    | List_Expr1 Term List_Expr
-    | List_Expr2 Term Term
-  deriving (Eq, Ord, Show, Read)
-
-data Constant = ConstantAtom Atom | ConstantNumber Number
-  deriving (Eq, Ord, Show, Read)
-
-data Number = NumberInteger Integer
-  deriving (Eq, Ord, Show, Read)
-
-data Atom = AtomName Name
-  deriving (Eq, Ord, Show, Read)
-
-data Functoor = FunctoorName Name
-  deriving (Eq, Ord, Show, Read)
-
-data Name = NameWoord Woord
+data Constant = Number Integer | Atom Name
   deriving (Eq, Ord, Show, Read)
 
