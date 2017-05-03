@@ -4,62 +4,71 @@ import ParProlog
 import AbsProlog
 import ErrM
 
-import Control.Monad.Reader
+import System.IO.Error (catchIOError, ioeGetErrorString)
 import Control.Monad.State
 
 import Data.Map
 
 type FunctorSig = (Name, Int)
 type Database = Map FunctorSig [Clause]
+type StateWriterMonad = StateT Database IO
 
-addToDb :: (Name, Int) -> [Clause] -> Database -> Database
+
+addToDb :: FunctorSig -> [Clause] -> Database -> Database
 addToDb = insertWith (++)
 
+-- getFromDb :: FunctorSig -> Database -> [Clause]
+-- getFromDb fs db =
 
--- TODO: Use state transformer to catch errors (wrong head)
--- TODO: Implement all cases
-addClause :: Clause -> State Database ()
-addClause uc@(UnitClause (Funct name args)) = do
-  state <- get
-  put $ addToDb (name, length args) [uc] state
-  return ()
+dataBaseToString :: Database -> [String]
+dataBaseToString = foldrWithKey foo []
+  where
+    foo (name, arity) args acc = (show name ++ ", " ++ show arity ++ ": " ++ show args) : acc
 
-addClause r@(Rule (Funct name args) _) = do
-  state <- get
-  put $ addToDb (name, length args) [r] state
-  return ()
 
-runSentence :: Sentence -> State Database ()
+addTerm :: Term -> Clause -> StateWriterMonad ()
+addTerm (Funct name args) clause = modify $ addToDb (name, length args) [clause]
+addTerm (Const (Atom name)) clause = modify $ addToDb (name, 0) []
+addTerm term _ = liftIO $ fail $ "Unexpected term: " ++ show term
+
+addClause :: Clause -> StateWriterMonad ()
+addClause uc@(UnitClause term) = addTerm term uc
+addClause r@(Rule term _) = addTerm term r
+
+
+runSentence :: Sentence -> StateWriterMonad ()
 runSentence (Directive d) = return ()
 runSentence (Query q) = return ()
 runSentence (SentenceClause c) = addClause c
 
 
-runSentences :: [Sentence] -> State Database ()
+runSentences :: [Sentence] -> StateWriterMonad ()
 runSentences [] = return ()
 runSentences (s:ss) = do
+  -- liftIO $ putStrLn "Wrong head (two terms on the left side)"
   runSentence s
   runSentences ss
 
 
-runProgram :: Program -> String
-runProgram (Program1 sentences) =
-  let s = execState (runSentences sentences) empty
-    in unlines $ stateToString s
+runProgram :: Program -> IO ()
+runProgram (Program1 sentences) = do
+  db <- execStateT (runSentences sentences) empty
+  putStrLn $ unlines $ dataBaseToString db
+  putStrLn "All OK, quitting..."
 
 
-stateToString :: Database -> [String]
-stateToString = foldrWithKey foo []
-  where
-    foo (name, arity) args acc = (show name ++ ", " ++ show arity ++ ": " ++ show args) : acc
-
-
-runProlog :: String -> String
+runProlog :: String -> IO ()
 runProlog s = let ts = myLexer s in case pProgram ts of
-   Bad s    -> "\nParse failed...\n"
+   Bad s    -> fail "parse failed..."
    Ok  tree -> runProgram tree
 
 
-main = do
-  interact runProlog
-  putStrLn ""
+
+
+errorHandler :: IOError -> IO ()
+errorHandler e = putStrLn $ "Error: " ++ ioeGetErrorString e
+
+processInput :: IO ()
+processInput = getContents >>= runProlog
+
+main = processInput `catchIOError` errorHandler
