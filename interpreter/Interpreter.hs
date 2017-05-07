@@ -30,7 +30,7 @@ emptyDatabase = M.empty
 dataBaseToString :: Database -> [String]
 dataBaseToString = M.foldrWithKey foo []
   where
-    foo (name, arity) args acc = (show name ++ ", " ++ show arity ++ ": " ++ show args) : acc
+    foo (name, arity) args acc = (show name ++ "/" ++ show arity ++ ": " ++ show args) : acc
 
 
 addTerm :: Term -> Clause -> StateWriterMonad ()
@@ -123,6 +123,7 @@ foldTerm f (OpArMod t1 t2) = OpArMod (foldTerm f t1) (foldTerm f t2)
 renameVar :: Int -> Term -> Term
 renameVar n (Var (Variable var)) = Var $ Variable $ name ++ "@" ++ show n
   where (name:_) = splitOn "@" var
+renameVar _ term = term
 
 
 renameVars :: Int -> Term -> Term
@@ -168,6 +169,7 @@ nullSubst = Var
 
 applyToVar :: Subst -> Term -> Term
 applyToVar s (Var v@(Variable _)) = s v
+applyToVar s t = t
 
 
 apply :: Subst -> Term -> Term
@@ -181,7 +183,9 @@ mapApply = map . apply
 unify :: Term -> Term -> [Subst]
 unify (Var x) (Var y) = if x == y then [nullSubst] else [x ->> Var y]
 unify (Var x) t = [x ->> t]
-unify t (Var x) = [x ->> t]
+unify t v@(Var x) = unify v t
+unify (Funct name1 terms1) (Funct name2 terms2) =
+  if name1 == name2 then listUnify terms1 terms2 else []
 unify _ _ = [nullSubst]
 -- TODO: unify other types of terms
 
@@ -190,6 +194,7 @@ listUnify [] [] = [nullSubst]
 listUnify (t:ts) (r:rs) = [u2 @@ u1
                           | u1 <- unify t r
                           , u2 <- listUnify (mapApply u1 ts) (mapApply u1 rs) ]
+listUnify _ _ = []
 
 
 toTermPair :: Clause -> (Term, [Term])
@@ -231,10 +236,21 @@ printSubs :: [Variable] -> Subst -> [String]
 printSubs ts s = [show t ++ " = " ++ show sub | t <- ts, let sub = s t]
 
 
-filterVars :: [Term] -> [Term]
-filterVars [] = []
-filterVars (Var v:ts) = Var v : filterVars ts
-filterVars (_:ts) = filterVars ts
+filterVar :: Term -> [Variable] -> [Variable]
+filterVar (Var v) acc = v : acc
+filterVar (Funct _ terms) acc = filterVars terms ++ acc
+filterVar (List l) acc = foo l acc
+  where
+    foo (ListNonEmpty le) acc = foo2 le acc
+    foo _ acc = acc
+    foo2 (LESingle t) acc = filterVar t acc
+    foo2 (LESeq t le) acc = filterVar t (foo2 le acc)
+    foo2 (LEHead h t) acc = filterVar h (filterVar t acc)
+filterVar _ acc = acc
+-- TODO: should anything else be here?
+
+filterVars :: [Term] -> [Variable]
+filterVars = foldr filterVar []
 
 
 solve :: Database -> Term -> IO ()
@@ -242,8 +258,7 @@ solve _ (Const c) = print $ show c
 solve db func@(Funct name terms) = do
   let vars = filterVars terms
   subs <- prove db [func]
-  let variables = [v | Var v <- vars]
-  let results = map (printSubs variables) subs
+  let results = map (printSubs vars) subs
   let printable = map unwords results
   putStrLn $ unlines printable
 solve db t = fail $ "Wrong type of term in query: " ++ show t
