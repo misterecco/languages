@@ -7,6 +7,7 @@ build-type:     Simple
 cabal-version:  >= 1.2
 
 executable interpreter
-  build-depends:  base, array, mtl, containers
+  build-depends:  base, array, mtl, containers, split
   main-is:        Interpreter.hs
   hs-source-dirs: out
+  other-modules:  Solver
