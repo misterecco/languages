@@ -9,6 +9,7 @@ import ErrM
 import System.IO.Error (catchIOError, ioeGetErrorString)
 import Control.Monad.State
 import Data.List.Split (splitOn)
+import Data.Maybe (catMaybes)
 
 import qualified Data.Map as M
 
@@ -24,8 +25,6 @@ addToDb = M.insertWith (++)
 emptyDatabase :: Database
 emptyDatabase = M.empty
 
--- getFromDb :: FunctorSig -> Database -> [Clause]
--- getFromDb fs db =
 
 dataBaseToString :: Database -> [String]
 dataBaseToString = M.foldrWithKey foo []
@@ -88,6 +87,7 @@ main = processInput `catchIOError` errorHandler
 
 
 
+
 foldTerm :: (Term -> Term) -> Term -> Term
 foldTerm f v@(Var _) = f v
 foldTerm f c@(Const _) = c
@@ -139,7 +139,7 @@ clausesFor :: FunctorSig -> Database -> IO [Clause]
 clausesFor fsig@(name, arity) db =
   case M.lookup fsig db of
     Just clauses -> return clauses
-    Nothing -> fail $ "Existence error: " ++ show name ++ "/" ++ show arity
+    Nothing -> fail $ "Undefined procedure: " ++ show name ++ "/" ++ show arity
 
 
 renameClauses :: Int -> Database -> Term -> IO [Clause]
@@ -180,21 +180,27 @@ mapApply :: Subst -> [Term] -> [Term]
 mapApply = map . apply
 
 
-unify :: Term -> Term -> [Subst]
-unify (Var x) (Var y) = if x == y then [nullSubst] else [x ->> Var y]
-unify (Var x) t = [x ->> t]
+-- TODO: how to signal failures?
+unify :: Term -> Term -> Maybe [Subst]
+unify (Var x) (Var y) = if x == y then return [nullSubst] else return [x ->> Var y]
+unify (Var x) t = return [x ->> t]
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
-  if name1 == name2 then listUnify terms1 terms2 else []
-unify _ _ = [nullSubst]
+  if name1 == name2 then listUnify terms1 terms2 else Nothing
+unify _ _ = Nothing
 -- TODO: unify other types of terms
 
-listUnify :: [Term] -> [Term] -> [Subst]
-listUnify [] [] = [nullSubst]
-listUnify (t:ts) (r:rs) = [u2 @@ u1
-                          | u1 <- unify t r
-                          , u2 <- listUnify (mapApply u1 ts) (mapApply u1 rs) ]
-listUnify _ _ = []
+listUnify :: [Term] -> [Term] -> Maybe [Subst]
+listUnify [] [] = return [nullSubst]
+listUnify (t:ts) (r:rs) = do
+  u <- unify t r
+  return [u2 @@ u1 | u1 <- u,
+                     let Just uu = listUnify (mapApply u1 ts) (mapApply u1 rs),
+                     u2 <- uu]
+  -- u1 <- unify t r
+  -- let u2 = catMaybes [listUnify (mapApply u ts) (mapApply u rs) | u <- u1]
+  -- [u2 @@ u1 |  u2 <- listUnify (mapApply u1 ts) (mapApply u1 rs) ]
+listUnify _ _ = Nothing
 
 
 toTermPair :: Clause -> (Term, [Term])
@@ -211,9 +217,10 @@ prooftree db = pt where
   pt _ s [] = return $ Done s
   pt n s (g:gs) = do
     renamedClauses <- renameClauses n db g
+    -- TODO: match also with Nothing
     result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
                        (tm, tp) <- toTermPairs renamedClauses,
-                       u <- unify g tm ]
+                       let Just uu = unify g tm, u <- uu ]
     return $ Choice result
 
 
@@ -231,7 +238,7 @@ prove db t = do
   pt <- prooftree db 1 nullSubst t
   search pt
 
-
+-- TODO: do not print identity substitutions
 printSubs :: [Variable] -> Subst -> [String]
 printSubs ts s = [show t ++ " = " ++ show sub | t <- ts, let sub = s t]
 
@@ -259,6 +266,6 @@ solve db func@(Funct name terms) = do
   let vars = filterVars terms
   subs <- prove db [func]
   let results = map (printSubs vars) subs
-  let printable = map unwords results
+  let printable = map unwords results -- TODO: print true when list is empty
   putStrLn $ unlines printable
 solve db t = fail $ "Wrong type of term in query: " ++ show t
