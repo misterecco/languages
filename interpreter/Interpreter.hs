@@ -24,16 +24,15 @@ runProgram :: Program -> IO ()
 runProgram (Program1 sentences) = do
   db <- execStateT (runSentences sentences) emptyDatabase
   putStrLn $ unlines $ dataBaseToString db
-  putStrLn "All OK, quitting..."
 
 runProlog :: String -> IO ()
 runProlog s = let ts = myLexer s in case pProgram ts of
-   Bad s    -> fail "Parse failed..."
+   Bad s    -> fail "ERROR: Parse failed..."
    Ok  tree -> runProgram tree
 
 
 errorHandler :: IOError -> IO ()
-errorHandler e = putStrLn $ "Error: " ++ ioeGetErrorString e
+errorHandler e = putStrLn $ "ERROR: " ++ ioeGetErrorString e
 
 processInput :: IO ()
 processInput = getContents >>= runProlog

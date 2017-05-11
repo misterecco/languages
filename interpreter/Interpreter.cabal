@@ -10,7 +10,7 @@ library
   hs-source-dirs:     out, src
   exposed-modules:    ErrM, LexProlog, ParProlog, PrintProlog, TestProlog,
                       Db, AbstractProlog, Solver
-  build-depends:      base >= 4.7 && < 5, array, mtl, containers, split
+  build-depends:      base >= 4.7 && < 5, array, mtl, containers, split, transformers
   default-language:   Haskell2010
   -- other-modules:
 

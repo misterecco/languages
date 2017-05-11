@@ -6,13 +6,13 @@ import AbsProlog
 import Debug.Trace
 
 
-import Control.Monad.Except
+import Control.Monad.Trans.Maybe
 import Data.List.Split (splitOn)
 import Data.Maybe (catMaybes, fromMaybe)
 
 import qualified Data.Map as M
 
-type ExceptIOMonad = ExceptT String IO
+type MaybeIOMonad = MaybeT IO
 type Subst = Variable -> Term
 data Prooftree = Done Subst | Choice [Prooftree]
 
@@ -79,6 +79,12 @@ renameClauses n db (Funct name args) = do
   clauses <- clausesFor (name, length args) db
   return $ map (renameClause n) clauses
 
+toTermPair :: Clause -> (Term, [Term])
+toTermPair (Rule h g) = (h, [g])
+toTermPair (UnitClause h) = (h, [])
+
+toTermPairs :: [Clause] -> [(Term, [Term])]
+toTermPairs = map toTermPair
 
 (->>) :: Variable -> Term -> Subst
 (->>) var t v | v == var = t
@@ -109,24 +115,24 @@ baseSubst :: [Subst]
 baseSubst = [nullSubst]
 
 -- TODO: signal errors
-unify :: Term -> Term -> Maybe [Subst]
+unify :: Term -> Term -> MaybeIOMonad [Subst]
 unify (Var x) (Var y) = if x == y then return baseSubst else return [x ->> Var y]
 unify (Var x) t = return [x ->> t]
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
-  if name1 == name2 then listUnify terms1 terms2 else Nothing
+  if name1 == name2 then listUnify terms1 terms2 else MaybeT (return Nothing)
 unify (List l1) (List l2) = unifyLists l1 l2
-unify (Const x) (Const y) = if x == y then return baseSubst else Nothing
-unify _ _ = Nothing
+unify (Const x) (Const y) = if x == y then return baseSubst else MaybeT (return Nothing)
+unify _ _ = MaybeT (return Nothing)
 -- TODO: unify other types of terms
 
-unifyLists :: Lst -> Lst -> Maybe [Subst]
+unifyLists :: Lst -> Lst -> MaybeIOMonad [Subst]
 unifyLists ListEmpty ListEmpty = return baseSubst
 unifyLists (ListChar s1) (ListChar s2) =
-  if s1 == s2 then return baseSubst else Nothing
-unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else Nothing
+  if s1 == s2 then return baseSubst else MaybeT (return Nothing)
+unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else MaybeT (return Nothing)
 unifyLists ListEmpty (ListChar s) = unifyLists (ListChar s) ListEmpty
-unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then Nothing
+unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then MaybeT (return Nothing)
   else unifyLists (ListNonEmpty $ LEHead (List $ ListChar [head s]) (List $ ListChar $ tail s)) le
 unifyLists le@(ListNonEmpty _) lc@(ListChar _) = unifyLists lc le
 unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
@@ -138,26 +144,34 @@ unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
   unifyLE le1@(LEHead _ _) le2@(LESingle _) = unifyLE le2 le1
   unifyLE (LESeq t1 t2) (LEHead h t) = listUnify [t1, List $ ListNonEmpty t2] [h, t]
   unifyLE leh@(LEHead _ _) les@(LESeq _ _) = unifyLE les leh
-  unifyLE _ _ = Nothing
-unifyLists _ _ = Nothing
+  unifyLE _ _ = MaybeT (return Nothing)
+unifyLists _ _ = MaybeT (return Nothing)
 
 
-listUnify :: [Term] -> [Term] -> Maybe [Subst]
+listUnify :: [Term] -> [Term] -> MaybeIOMonad [Subst]
 listUnify [] [] = return [nullSubst]
 listUnify (t:ts) (r:rs) = do
   u <- unify t r
-  return [u2 @@ u1 | u1 <- u,
-                     let uu = concat $ listUnify (mapApply u1 ts) (mapApply u1 rs),
-                     u2 <- uu]
-listUnify _ _ = Nothing
+  uuu <- mapM (foo ts rs) u
+  return [u2 @@ u1 | (u1, uu) <- uuu, u2 <- uu]
+    where
+      foo :: [Term] -> [Term] -> Subst -> MaybeIOMonad (Subst, [Subst])
+      foo ts rs u1 = do
+        uu <- listUnify (mapApply u1 ts) (mapApply u1 rs)
+        return (u1, uu)
+listUnify _ _ = MaybeT (return Nothing)
 
 
-toTermPair :: Clause -> (Term, [Term])
-toTermPair (Rule h g) = (h, [g])
-toTermPair (UnitClause h) = (h, [])
-
-toTermPairs :: [Clause] -> [(Term, [Term])]
-toTermPairs = map toTermPair
+-- prooftree :: Database -> Int -> Subst -> [Term] -> IO Prooftree
+-- prooftree db = pt where
+--   pt :: Int -> Subst -> [Term] -> IO Prooftree
+--   pt _ s [] = return $ Done s
+--   pt n s (g:gs) = do
+--     renamedClauses <- renameClauses n db g
+--     result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
+--                        (tm, tp) <- toTermPairs (traceShowId renamedClauses),
+--                        u <- fromMaybe [] (unify g tm) ]
+--     return $ Choice result
 
 
 prooftree :: Database -> Int -> Subst -> [Term] -> IO Prooftree
@@ -166,10 +180,18 @@ prooftree db = pt where
   pt _ s [] = return $ Done s
   pt n s (g:gs) = do
     renamedClauses <- renameClauses n db g
-    result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
-                       (tm, tp) <- toTermPairs (traceShowId renamedClauses),
-                       u <- fromMaybe [] (unify g tm) ]
+    let rules = toTermPairs (traceShowId renamedClauses)
+    newSubst <- runMaybeT $ foo g gs rules
+    let sss = concat newSubst
+    result <- sequence [ pt (n+1) (u@@s) ls | (u, ls) <- sss]
     return $ Choice result
+    where
+      foo :: Term -> [Term] -> [(Term, [Term])] -> MaybeIOMonad [(Subst, [Term])]
+      foo _ _ [] = return []
+      foo g gs ((tm, tp):rs) = do
+        uu <- unify g tm
+        rest <- foo g gs rs
+        return $ map (\u -> (u, mapApply u (tp++gs))) uu ++ rest
 
 
 search :: Prooftree -> IO [Subst]
@@ -178,7 +200,6 @@ search (Choice pts) = do
   let spt = map search pts
   sst <- sequence spt
   return $ concat sst
-
 
 
 prove :: Database -> [Term] -> IO [Subst]
@@ -203,19 +224,15 @@ filterVar (List l) acc = foo l acc
     foo2 (LESeq t le) acc = filterVar t (foo2 le acc)
     foo2 (LEHead h t) acc = filterVar h (filterVar t acc)
 filterVar _ acc = acc
--- TODO: should anything else be here?
 
 filterVars :: [Term] -> [Variable]
 filterVars = foldr filterVar []
 
 
--- TODO: rename variables in database in step 0
 solve :: Database -> Term -> IO ()
 solve _ (Const c) = print $ show c
 solve db func@(Funct name terms) = do
-  -- putStrLn $ unlines $ dataBaseToString db
   let vars = filterVars terms
-  -- print vars
   subs <- prove db [func]
   let results = if null subs then [["false"]]
                              else map (printSubs vars) subs
