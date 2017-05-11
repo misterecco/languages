@@ -104,7 +104,7 @@ data ListExpr
 instance Show ListExpr where
   show (LESingle t) = show t
   show (LESeq t le) = show t ++ ", " ++ show le
-  show (LEHead h t) = show h ++ " | " ++ show t
+  show (LEHead h t) = show t ++ " | " ++ show t
 
 
 data Constant = Number Integer | Atom Name

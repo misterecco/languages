@@ -77,6 +77,7 @@ s1 @@ s2 = apply s1 . s2
 
 solution :: [Id] -> Subst -> [String]
 solution ids s = [unwords[show id,"=",show t] | (id,t) <- [(i,s i) | i <- ids], t /=Var id]
+
 unify :: Term -> Term -> [Subst]
 unify (Var x) (Var y) = if x == y then [nullSubst] else [x->>Var y]
 unify (Var x) t = [x ->> t] -- OBS no occur check

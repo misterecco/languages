@@ -1,2 +1,5 @@
 interpreter:
-	runhaskell -i./out Interpreter.hs
+	rlwrap runhaskell -i./out:./src Interpreter.hs
+
+grammar:
+	bnfc --haskell --outputdir=out --makefile prolog.cf
