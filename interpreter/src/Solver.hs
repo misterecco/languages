@@ -147,7 +147,7 @@ listUnify [] [] = return [nullSubst]
 listUnify (t:ts) (r:rs) = do
   u <- unify t r
   return [u2 @@ u1 | u1 <- u,
-                     let uu = concat $ catMaybes [listUnify (mapApply u1 ts) (mapApply u1 rs)],
+                     let uu = concat $ listUnify (mapApply u1 ts) (mapApply u1 rs),
                      u2 <- uu]
 listUnify _ _ = Nothing
 
