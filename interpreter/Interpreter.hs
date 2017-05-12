@@ -27,7 +27,7 @@ runProgram (Program1 sentences) = do
 
 runProlog :: String -> IO ()
 runProlog s = let ts = myLexer s in case pProgram ts of
-   Bad s    -> fail "ERROR: Parse failed..."
+   Bad s    -> fail "Parse failed..."
    Ok  tree -> runProgram tree
 
 

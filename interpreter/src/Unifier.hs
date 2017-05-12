@@ -75,6 +75,10 @@ foldTerm f (OpArDiv t1 t2) = OpArDiv (foldTerm f t1) (foldTerm f t2)
 foldTerm f (OpArMod t1 t2) = OpArMod (foldTerm f t1) (foldTerm f t2)
 
 
+-- TODO: write this function
+-- resolve :: Subst -> Term -> ExceptMaybeMonad Term
+
+
 -- TODO: signal errors
 unify :: Term -> Term -> ExceptMaybeMonad [Subst]
 unify (Var x) (Var y) = if x == y then return baseSubst else return [x ->> Var y]

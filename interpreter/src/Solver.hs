@@ -13,6 +13,8 @@ import Data.Maybe (catMaybes, fromMaybe)
 
 import qualified Data.Map as M
 
+import System.IO.Error (catchIOError, ioeGetErrorString)
+
 
 printSubs :: [Variable] -> Subst -> [String]
 printSubs ts s = if null subs then ["true"] else subs where
@@ -33,7 +35,7 @@ filterVar _ acc = acc
 
 
 filterVars :: [Term] -> [Variable]
-filterVars = foldr filterVar []
+filterVars t = nub $ foldr filterVar [] t
 
 
 renameVar :: Int -> Term -> Term
@@ -51,14 +53,14 @@ renameClause n (Rule t gs) = Rule (renameVars n t) (map (renameVars n) gs)
 renameClause n (UnitClause t) = UnitClause $ renameVars n t
 
 
-clausesFor :: FunctorSig -> Database -> ExceptMonad [Clause]
+clausesFor :: FunctorSig -> Database -> ExceptMaybeMonad [Clause]
 clausesFor fsig@(name, arity) db =
   case M.lookup fsig db of
     Just clauses -> return clauses
     Nothing -> fail $ "Undefined procedure: " ++ show name ++ "/" ++ show arity
 
 
-renameClauses :: Int -> Database -> Term -> ExceptMonad [Clause]
+renameClauses :: Int -> Database -> Term -> ExceptMaybeMonad [Clause]
 renameClauses n db (Const (Atom name)) = do
   clauses <- clausesFor (name, 0) db
   return $ map (renameClause n) clauses
@@ -77,20 +79,37 @@ toTermPairs :: [Clause] -> [(Term, [Term])]
 toTermPairs = map toTermPair
 
 
-prooftree :: Database -> Int -> Subst -> [Term] -> ExceptMonad Prooftree
+-- TODO: better name?
+substantiate :: Database -> Subst -> Term -> ExceptMaybeMonad ([Subst], Term)
+-- substantiate s t@(OpUnifies t1 t2) = do
+--   s1 <- unify t1 t2
+--   return (s1, t)
+substantiate db s t@(OpEqual t1 t2) = if t1 == t2 then return ([], t) else failure
+substantiate db s t@(OpNotEqual t1 t2) = if t1 /= t2 then return ([], t) else failure
+substantiate db s t = return ([], t)
+
+
+prooftree :: Database -> Int -> Subst -> [Term] -> ExceptMaybeMonad Prooftree
 prooftree db = pt where
-  pt :: Int -> Subst -> [Term] -> ExceptMonad Prooftree
+  pt :: Int -> Subst -> [Term] -> ExceptMaybeMonad Prooftree
   pt _ s [] = return $ Done s
-  pt n s (g:gs) = do
-    renamedClauses <- renameClauses n db g
-    result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
-                       (tm, tp) <- toTermPairs (traceShowId renamedClauses),
-                       -- TODO: catch errors instead of converting to empty list
-                       u <- either (const []) id (fromMaybe (Right []) (runExceptT $ unify g tm)) ]
+  pt n ns (ng:gs) = do
+    -- (nss, ng) <- substantiate db s g
+    -- let ns = foldr (@@) s nss
+    renamedClauses <- renameClauses n db ng
+    let tmTpList = toTermPairs $ traceShowId renamedClauses
+    uuu <- mapM (unifyHeader ng) tmTpList
+    let uu = concat uuu
+    result <- sequence [ pt (n+1) (u@@ns) (mapApply u (tp++gs)) |
+                       (tm, tp, u) <- uu ]
     return $ Choice result
+    where
+      unifyHeader g (tm, tp) = do
+         us <- unify g tm
+         return [(tm, tp, u) | u <- us]
 
 
-search :: Prooftree -> ExceptMonad [Subst]
+search :: Prooftree -> ExceptMaybeMonad [Subst]
 search (Done s) = return [s]
 search (Choice pts) = do
   let spt = map search pts
@@ -98,31 +117,29 @@ search (Choice pts) = do
   return $ concat sst
 
 
-prove :: Database -> [Term] -> ExceptMonad [Subst]
+prove :: Database -> [Term] -> ExceptMaybeMonad [Subst]
 prove db t = do
   pt <- prooftree db 1 nullSubst (traceShowId t)
   search pt
 
 
-runProve :: Database -> Term -> IO [Subst]
-runProve db func = do
-  let subs = runExcept $ prove db [func]
-  case subs of
-    Left err -> fail err
-    Right v -> return v
-
-
 solve :: Database -> Term -> IO ()
-solve db (Const (Atom a)) = do
-  -- TOOD: do not fail silently
-  let g = clausesFor (a, 0) db
-  -- TODO: it doesn't have to be unit clause
-  putStrLn "true"
+solve db c@(Const (Atom a)) = do
+  let subs = runExceptT $ prove db [c]
+  case subs of
+    Nothing -> putStrLn "false"
+    Just s -> case s of
+      Left err -> fail err
+      Right substitutions -> putStrLn "true"
 solve db func@(Funct name terms) = do
   let vars = filterVars terms
-  subs <- runProve db func
-  let results = if null subs then [["false"]]
-                             else map (printSubs vars) subs
-  let printable = map unwords results
-  putStrLn $ unlines printable
+  let subs = runExceptT $ prove db [func]
+  case subs of
+    Nothing -> putStrLn "false"
+    Just s -> case s of
+      Left err -> fail err
+      Right substitutions -> do
+        let results = map (printSubs vars) substitutions
+        let printable = map unwords results
+        putStrLn $ unlines printable
 solve db t = fail $ "Wrong type of term in query: " ++ show t
