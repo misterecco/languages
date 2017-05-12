@@ -16,8 +16,10 @@ rules      Sentence ::= Clause ;
 Directive. Sentence ::= ":-" Term ;
 Query.     Sentence ::= "?-" Term ;
 
-Rule.       Clause ::= Term ":-" Term ;
+Rule.       Clause ::= Term ":-" [Term] ;
 UnitClause. Clause ::= Term ;
+
+separator nonempty Term "," ;
 
 _. Term   ::= Term12 ;
 _. Term12 ::= Term11 ;
@@ -34,7 +36,7 @@ _. Term2  ::= Term1  ;
 _. Term1  ::= Term0  ;
 _. Term0  ::= "(" Term12 ")";
 
-OpSequence.   Term10 ::= Term9 "," Term10 ;
+-- OpSequence.   Term10 ::= Term9 "," Term10 ;
 
 OpNegate.     Term9 ::= "\\+" Term9 ;
 

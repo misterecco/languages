@@ -25,11 +25,10 @@ transSentence x = case x of
   Query term -> failure x
 transClause :: Clause -> Result
 transClause x = case x of
-  Rule term1 term2 -> failure x
+  Rule term terms -> failure x
   UnitClause term -> failure x
 transTerm :: Term -> Result
 transTerm x = case x of
-  OpSequence term1 term2 -> failure x
   OpNegate term -> failure x
   OpUnifies term1 term2 -> failure x
   OpNotUnifies term1 term2 -> failure x

@@ -5,8 +5,8 @@ import AbsProlog
 
 import Debug.Trace
 
-
 import Control.Monad.Trans.Maybe
+import Data.List (nub)
 import Data.List.Split (splitOn)
 import Data.Maybe (catMaybes, fromMaybe)
 
@@ -15,6 +15,28 @@ import qualified Data.Map as M
 type MaybeIOMonad = MaybeT IO
 type Subst = Variable -> Term
 data Prooftree = Done Subst | Choice [Prooftree]
+
+
+printSubs :: [Variable] -> Subst -> [String]
+printSubs ts s = if null subs then ["true"] else subs where
+  subs = [show t ++ " = " ++ show sub | t <- ts, let sub = s t, sub /= Var t]
+
+
+filterVar :: Term -> [Variable] -> [Variable]
+filterVar (Var v) acc = v : acc
+filterVar (Funct _ terms) acc = filterVars terms ++ acc
+filterVar (List l) acc = foo l acc
+  where
+    foo (ListNonEmpty le) acc = foo2 le acc
+    foo _ acc = acc
+    foo2 (LESingle t) acc = filterVar t acc
+    foo2 (LESeq t le) acc = filterVar t (foo2 le acc)
+    foo2 (LEHead h t) acc = filterVar h (filterVar t acc)
+filterVar _ acc = acc
+
+
+filterVars :: [Term] -> [Variable]
+filterVars = foldr filterVar []
 
 
 foldTerm :: (Term -> Term) -> Term -> Term
@@ -30,7 +52,6 @@ foldTerm f (List l) = List $ foldList l
         foldLE (LEHead h t) = LEHead (foldTerm f h) (foldTerm f t)
 foldTerm f (OpNegate t) = OpNegate $ foldTerm f t
 foldTerm f (OpArNeg t) = OpArNeg $ foldTerm f t
-foldTerm f (OpSequence t1 t2) = OpSequence (foldTerm f t1) (foldTerm f t2)
 foldTerm f (OpUnifies t1 t2) = OpUnifies (foldTerm f t1) (foldTerm f t2)
 foldTerm f (OpNotUnifies t1 t2) = OpNotUnifies (foldTerm f t1) (foldTerm f t2)
 foldTerm f (OpEqual t1 t2) = OpEqual (foldTerm f t1) (foldTerm f t2)
@@ -60,7 +81,7 @@ renameVars n = foldTerm (renameVar n)
 
 
 renameClause :: Int -> Clause -> Clause
-renameClause n (Rule t1 t2) = Rule (renameVars n t1) (renameVars n t2)
+renameClause n (Rule t gs) = Rule (renameVars n t) (map (renameVars n) gs)
 renameClause n (UnitClause t) = UnitClause $ renameVars n t
 
 
@@ -78,13 +99,17 @@ renameClauses n db (Const (Atom name)) = do
 renameClauses n db (Funct name args) = do
   clauses <- clausesFor (name, length args) db
   return $ map (renameClause n) clauses
+renameClauses _ _ _ = return []
+
 
 toTermPair :: Clause -> (Term, [Term])
-toTermPair (Rule h g) = (h, [g])
+toTermPair (Rule h g) = (h, g)
 toTermPair (UnitClause h) = (h, [])
+
 
 toTermPairs :: [Clause] -> [(Term, [Term])]
 toTermPairs = map toTermPair
+
 
 (->>) :: Variable -> Term -> Subst
 (->>) var t v | v == var = t
@@ -93,6 +118,7 @@ toTermPairs = map toTermPair
 
 (@@) :: Subst -> Subst -> Subst
 s1 @@ s2 = apply s1 . s2
+
 
 nullSubst :: Subst
 nullSubst = Var
@@ -115,24 +141,25 @@ baseSubst :: [Subst]
 baseSubst = [nullSubst]
 
 -- TODO: signal errors
-unify :: Term -> Term -> MaybeIOMonad [Subst]
+unify :: Term -> Term -> Maybe [Subst]
 unify (Var x) (Var y) = if x == y then return baseSubst else return [x ->> Var y]
+-- TODO: true only for Func, List, Const
 unify (Var x) t = return [x ->> t]
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
-  if name1 == name2 then listUnify terms1 terms2 else MaybeT (return Nothing)
+  if name1 == name2 then listUnify terms1 terms2 else Nothing
 unify (List l1) (List l2) = unifyLists l1 l2
-unify (Const x) (Const y) = if x == y then return baseSubst else MaybeT (return Nothing)
-unify _ _ = MaybeT (return Nothing)
+unify (Const x) (Const y) = if x == y then return baseSubst else Nothing
+unify _ _ = Nothing
 -- TODO: unify other types of terms
 
-unifyLists :: Lst -> Lst -> MaybeIOMonad [Subst]
+unifyLists :: Lst -> Lst -> Maybe [Subst]
 unifyLists ListEmpty ListEmpty = return baseSubst
 unifyLists (ListChar s1) (ListChar s2) =
-  if s1 == s2 then return baseSubst else MaybeT (return Nothing)
-unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else MaybeT (return Nothing)
+  if s1 == s2 then return baseSubst else Nothing
+unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else Nothing
 unifyLists ListEmpty (ListChar s) = unifyLists (ListChar s) ListEmpty
-unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then MaybeT (return Nothing)
+unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then Nothing
   else unifyLists (ListNonEmpty $ LEHead (List $ ListChar [head s]) (List $ ListChar $ tail s)) le
 unifyLists le@(ListNonEmpty _) lc@(ListChar _) = unifyLists lc le
 unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
@@ -144,34 +171,19 @@ unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
   unifyLE le1@(LEHead _ _) le2@(LESingle _) = unifyLE le2 le1
   unifyLE (LESeq t1 t2) (LEHead h t) = listUnify [t1, List $ ListNonEmpty t2] [h, t]
   unifyLE leh@(LEHead _ _) les@(LESeq _ _) = unifyLE les leh
-  unifyLE _ _ = MaybeT (return Nothing)
-unifyLists _ _ = MaybeT (return Nothing)
+  unifyLE _ _ = Nothing
+unifyLists _ _ = Nothing
 
 
-listUnify :: [Term] -> [Term] -> MaybeIOMonad [Subst]
+
+listUnify :: [Term] -> [Term] -> Maybe [Subst]
 listUnify [] [] = return [nullSubst]
 listUnify (t:ts) (r:rs) = do
   u <- unify t r
-  uuu <- mapM (foo ts rs) u
-  return [u2 @@ u1 | (u1, uu) <- uuu, u2 <- uu]
-    where
-      foo :: [Term] -> [Term] -> Subst -> MaybeIOMonad (Subst, [Subst])
-      foo ts rs u1 = do
-        uu <- listUnify (mapApply u1 ts) (mapApply u1 rs)
-        return (u1, uu)
-listUnify _ _ = MaybeT (return Nothing)
-
-
--- prooftree :: Database -> Int -> Subst -> [Term] -> IO Prooftree
--- prooftree db = pt where
---   pt :: Int -> Subst -> [Term] -> IO Prooftree
---   pt _ s [] = return $ Done s
---   pt n s (g:gs) = do
---     renamedClauses <- renameClauses n db g
---     result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
---                        (tm, tp) <- toTermPairs (traceShowId renamedClauses),
---                        u <- fromMaybe [] (unify g tm) ]
---     return $ Choice result
+  return [u2 @@ u1 | u1 <- u,
+                     let uu = concat $ listUnify (mapApply u1 ts) (mapApply u1 rs),
+                     u2 <- uu]
+listUnify _ _ = Nothing
 
 
 prooftree :: Database -> Int -> Subst -> [Term] -> IO Prooftree
@@ -180,18 +192,10 @@ prooftree db = pt where
   pt _ s [] = return $ Done s
   pt n s (g:gs) = do
     renamedClauses <- renameClauses n db g
-    let rules = toTermPairs (traceShowId renamedClauses)
-    newSubst <- runMaybeT $ foo g gs rules
-    let sss = concat newSubst
-    result <- sequence [ pt (n+1) (u@@s) ls | (u, ls) <- sss]
+    result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
+                       (tm, tp) <- toTermPairs (traceShowId renamedClauses),
+                       u <- fromMaybe [] (unify g tm) ]
     return $ Choice result
-    where
-      foo :: Term -> [Term] -> [(Term, [Term])] -> MaybeIOMonad [(Subst, [Term])]
-      foo _ _ [] = return []
-      foo g gs ((tm, tp):rs) = do
-        uu <- unify g tm
-        rest <- foo g gs rs
-        return $ map (\u -> (u, mapApply u (tp++gs))) uu ++ rest
 
 
 search :: Prooftree -> IO [Subst]
@@ -208,29 +212,11 @@ prove db t = do
   search pt
 
 
-printSubs :: [Variable] -> Subst -> [String]
-printSubs ts s = if null subs then ["true"] else subs where
-  subs = [show t ++ " = " ++ show sub | t <- ts, let sub = s t, sub /= Var t]
-
-
-filterVar :: Term -> [Variable] -> [Variable]
-filterVar (Var v) acc = v : acc
-filterVar (Funct _ terms) acc = filterVars terms ++ acc
-filterVar (List l) acc = foo l acc
-  where
-    foo (ListNonEmpty le) acc = foo2 le acc
-    foo _ acc = acc
-    foo2 (LESingle t) acc = filterVar t acc
-    foo2 (LESeq t le) acc = filterVar t (foo2 le acc)
-    foo2 (LEHead h t) acc = filterVar h (filterVar t acc)
-filterVar _ acc = acc
-
-filterVars :: [Term] -> [Variable]
-filterVars = foldr filterVar []
-
-
 solve :: Database -> Term -> IO ()
-solve _ (Const c) = print $ show c
+solve db (Const (Atom a)) = do
+  g <- clausesFor (a, 0) db
+  -- TODO: it doesn't have to be unit clause
+  putStrLn "true"
 solve db func@(Funct name terms) = do
   let vars = filterVars terms
   subs <- prove db [func]

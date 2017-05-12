@@ -63,8 +63,10 @@ Sentence : Clause { AbsProlog.SentenceClause $1 }
          | ':-' Term { AbsProlog.Directive $2 }
          | '?-' Term { AbsProlog.Query $2 }
 Clause :: { Clause }
-Clause : Term ':-' Term { AbsProlog.Rule $1 $3 }
+Clause : Term ':-' ListTerm { AbsProlog.Rule $1 $3 }
        | Term { AbsProlog.UnitClause $1 }
+ListTerm :: { [Term] }
+ListTerm : Term { (:[]) $1 } | Term ',' ListTerm { (:) $1 $3 }
 Term :: { Term }
 Term : Term12 { $1 }
 Term12 :: { Term }
@@ -73,7 +75,6 @@ Term11 :: { Term }
 Term11 : Term10 { $1 }
 Term10 :: { Term }
 Term10 : Term9 { $1 }
-       | Term9 ',' Term10 { AbsProlog.OpSequence $1 $3 }
 Term9 :: { Term }
 Term9 : Term8 { $1 } | '\\+' Term9 { AbsProlog.OpNegate $2 }
 Term8 :: { Term }

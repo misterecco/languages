@@ -29,7 +29,7 @@ instance Show Sentence where
   show (SentenceClause c) = show c ++ "."
 
 
-data Clause = Rule Term Term | UnitClause Term
+data Clause = Rule Term [Term] | UnitClause Term
   deriving (Eq, Ord, Read)
 
 instance Show Clause where
@@ -37,8 +37,7 @@ instance Show Clause where
   show (UnitClause t) = show t
 
 data Term
-    = OpSequence Term Term
-    | OpNegate Term
+    = OpNegate Term
     | OpUnifies Term Term
     | OpNotUnifies Term Term
     | OpEqual Term Term
@@ -63,7 +62,6 @@ data Term
   deriving (Eq, Ord, Read)
 
 instance Show Term where
-  show (OpSequence t1 t2)   = show t1 ++ ", " ++ show t2
   show (OpNegate t1)        = "\\+ " ++ show t1
   show (OpUnifies t1 t2)    = show t1 ++ " = " ++ show t2
   show (OpNotUnifies t1 t2) = show t1 ++ " \\= " ++ show t2
@@ -104,7 +102,7 @@ data ListExpr
 instance Show ListExpr where
   show (LESingle t) = show t
   show (LESeq t le) = show t ++ ", " ++ show le
-  show (LEHead h t) = show t ++ " | " ++ show t
+  show (LEHead h t) = show h ++ " | " ++ show t
 
 
 data Constant = Number Integer | Atom Name

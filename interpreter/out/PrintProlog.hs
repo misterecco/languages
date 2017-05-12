@@ -101,12 +101,11 @@ instance Print Sentence where
   prtList _ (x:xs) = (concatD [prt 0 x, doc (showString "."), prt 0 xs])
 instance Print Clause where
   prt i e = case e of
-    Rule term1 term2 -> prPrec i 0 (concatD [prt 0 term1, doc (showString ":-"), prt 0 term2])
+    Rule term terms -> prPrec i 0 (concatD [prt 0 term, doc (showString ":-"), prt 0 terms])
     UnitClause term -> prPrec i 0 (concatD [prt 0 term])
 
 instance Print Term where
   prt i e = case e of
-    OpSequence term1 term2 -> prPrec i 10 (concatD [prt 9 term1, doc (showString ","), prt 10 term2])
     OpNegate term -> prPrec i 9 (concatD [doc (showString "\\+"), prt 9 term])
     OpUnifies term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "="), prt 6 term2])
     OpNotUnifies term1 term2 -> prPrec i 7 (concatD [prt 6 term1, doc (showString "\\="), prt 6 term2])
@@ -131,6 +130,8 @@ instance Print Term where
     List lst -> prPrec i 0 (concatD [prt 0 lst])
   prtList 9 [x] = (concatD [prt 9 x])
   prtList 9 (x:xs) = (concatD [prt 9 x, doc (showString ","), prt 9 xs])
+  prtList _ [x] = (concatD [prt 0 x])
+  prtList _ (x:xs) = (concatD [prt 0 x, doc (showString ","), prt 0 xs])
 instance Print Lst where
   prt i e = case e of
     ListEmpty -> prPrec i 0 (concatD [doc (showString "["), doc (showString "]")])
