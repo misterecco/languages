@@ -10,8 +10,8 @@ type Subst = Variable -> Term
 data Prooftree = Done Subst | Choice [Prooftree]
 
 
-failure :: ExceptMaybeMonad a
-failure = ExceptT Nothing
+failure :: [Subst]
+failure = []
 
 
 nullSubst :: Subst
@@ -79,25 +79,24 @@ foldTerm f (OpArMod t1 t2) = OpArMod (foldTerm f t1) (foldTerm f t2)
 -- resolve :: Subst -> Term -> ExceptMaybeMonad Term
 
 
--- TODO: signal errors
-unify :: Term -> Term -> ExceptMaybeMonad [Subst]
-unify (Var x) (Var y) = if x == y then return baseSubst else return [x ->> Var y]
+unify :: Term -> Term -> [Subst]
+unify (Var x) (Var y) = if x == y then baseSubst else [x ->> Var y]
 -- TODO: true only for Func, List, Const
-unify (Var x) t = return [x ->> t]
+unify (Var x) t = [x ->> t]
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
   if name1 == name2 then listUnify terms1 terms2 else failure
 unify (List l1) (List l2) = unifyLists l1 l2
-unify (Const x) (Const y) = if x == y then return baseSubst else failure
+unify (Const x) (Const y) = if x == y then baseSubst else failure
 unify _ _ = failure
 -- TODO: unify other types of terms
 
 
-unifyLists :: Lst -> Lst -> ExceptMaybeMonad [Subst]
-unifyLists ListEmpty ListEmpty = return baseSubst
+unifyLists :: Lst -> Lst -> [Subst]
+unifyLists ListEmpty ListEmpty = baseSubst
 unifyLists (ListChar s1) (ListChar s2) =
-  if s1 == s2 then return baseSubst else failure
-unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else failure
+  if s1 == s2 then baseSubst else failure
+unifyLists (ListChar s) ListEmpty = if null s then baseSubst else failure
 unifyLists ListEmpty (ListChar s) = unifyLists (ListChar s) ListEmpty
 unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then failure
   else unifyLists (ListNonEmpty $ LEHead (List $ ListChar [head s]) (List $ ListChar $ tail s)) le
@@ -115,11 +114,10 @@ unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
 unifyLists _ _ = failure
 
 
-listUnify :: [Term] -> [Term] -> ExceptMaybeMonad [Subst]
-listUnify [] [] = return [nullSubst]
-listUnify (t:ts) (r:rs) = do
-  u <- unify t r
-  return [u2 @@ u1 | u1 <- u,
-                     let uu = concat $ listUnify (mapApply u1 ts) (mapApply u1 rs),
+listUnify :: [Term] -> [Term] -> [Subst]
+listUnify [] [] = [nullSubst]
+listUnify (t:ts) (r:rs) =
+  [u2 @@ u1 | u1 <- unify t r,
+                     let uu = listUnify (mapApply u1 ts) (mapApply u1 rs),
                      u2 <- uu]
 listUnify _ _ = failure
