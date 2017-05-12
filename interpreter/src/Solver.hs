@@ -3,6 +3,7 @@ module Solver where
 import Db
 import AbsProlog
 import Unifier
+import Extensions
 
 import Debug.Trace
 
@@ -79,17 +80,6 @@ toTermPairs :: [Clause] -> [(Term, [Term])]
 toTermPairs = map toTermPair
 
 
-check :: Database -> Term -> ExceptMaybeMonad [Subst]
--- check db s t@(OpUnifies t1 t2) = do
-  -- s1 <- unify t1 t2
-  -- return (s1, t)
-check db t@(OpEqual t1 t2) = if traceShowId t1 == traceShowId t2
-                               then return [] else ExceptT Nothing
-check db t@(OpNotEqual t1 t2) = if t1 /= t2
-                               then return [] else ExceptT Nothing
-check db t = return []
-
-
 ptTerm :: Database -> Int -> Subst -> Term -> [Term] -> ExceptMonad Prooftree
 ptTerm db n s g gs = do
   renamedClauses <- renameClauses n db g
@@ -99,7 +89,7 @@ ptTerm db n s g gs = do
   return $ Choice result
 
 
--- extension to prolog (no unification against heads)
+-- extensions to prolog (non-declarative constructs)
 ptExt :: Database -> Int -> Subst -> Term -> [Term] -> ExceptMonad Prooftree
 ptExt db n s g gs =
   case runExceptT $ check db g of
@@ -112,10 +102,6 @@ ptExt db n s g gs =
         return $ Choice [result]
 
 
-prooftree :: Database -> Int -> Subst -> [Term] -> ExceptMonad Prooftree
-prooftree = pt
-
-
 pt :: Database -> Int -> Subst -> [Term] -> ExceptMonad Prooftree
 pt _ _ s [] = return $ Done s
 pt db n s (g:gs) = case g of
@@ -124,7 +110,6 @@ pt db n s (g:gs) = case g of
   (Const _) -> ptTerm db n s g gs
   (List _) -> ptTerm db n s g gs
   _ -> ptExt db n s g gs
-
 
 
 search :: Prooftree -> ExceptMonad [Subst]
@@ -137,8 +122,8 @@ search (Choice pts) = do
 
 prove :: Database -> [Term] -> ExceptMonad [Subst]
 prove db t = do
-  pt <- prooftree db 1 nullSubst (traceShowId t)
-  search pt
+  prooftree <- pt db 1 nullSubst (traceShowId t)
+  search prooftree
 
 
 solve :: Database -> Term -> IO ()

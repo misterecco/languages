@@ -75,14 +75,12 @@ foldTerm f (OpArDiv t1 t2) = OpArDiv (foldTerm f t1) (foldTerm f t2)
 foldTerm f (OpArMod t1 t2) = OpArMod (foldTerm f t1) (foldTerm f t2)
 
 
--- TODO: write this function
--- resolve :: Subst -> Term -> ExceptMaybeMonad Term
-
-
 unify :: Term -> Term -> [Subst]
 unify (Var x) (Var y) = if x == y then baseSubst else [x ->> Var y]
--- TODO: true only for Func, List, Const
-unify (Var x) t = [x ->> t]
+unify (Var x) l@(List _) = [x ->> l]
+unify (Var x) c@(Const _) = [x ->> c]
+unify (Var x) f@(Funct _ _) = [x ->> f]
+unify (Var x) _ = failure
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
   if name1 == name2 then listUnify terms1 terms2 else failure
