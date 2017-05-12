@@ -5,16 +5,20 @@ import AbsProlog
 
 import Debug.Trace
 
-import Control.Monad.Trans.Maybe
 import Data.List (nub)
 import Data.List.Split (splitOn)
 import Data.Maybe (catMaybes, fromMaybe)
+import Control.Monad.Except
 
 import qualified Data.Map as M
 
-type MaybeIOMonad = MaybeT IO
+type ExceptMaybeMonad = ExceptT String Maybe
 type Subst = Variable -> Term
 data Prooftree = Done Subst | Choice [Prooftree]
+
+
+failure :: ExceptMaybeMonad a
+failure = ExceptT Nothing
 
 
 printSubs :: [Variable] -> Subst -> [String]
@@ -141,25 +145,25 @@ baseSubst :: [Subst]
 baseSubst = [nullSubst]
 
 -- TODO: signal errors
-unify :: Term -> Term -> Maybe [Subst]
+unify :: Term -> Term -> ExceptMaybeMonad [Subst]
 unify (Var x) (Var y) = if x == y then return baseSubst else return [x ->> Var y]
 -- TODO: true only for Func, List, Const
 unify (Var x) t = return [x ->> t]
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
-  if name1 == name2 then listUnify terms1 terms2 else Nothing
+  if name1 == name2 then listUnify terms1 terms2 else failure
 unify (List l1) (List l2) = unifyLists l1 l2
-unify (Const x) (Const y) = if x == y then return baseSubst else Nothing
-unify _ _ = Nothing
+unify (Const x) (Const y) = if x == y then return baseSubst else failure
+unify _ _ = failure
 -- TODO: unify other types of terms
 
-unifyLists :: Lst -> Lst -> Maybe [Subst]
+unifyLists :: Lst -> Lst -> ExceptMaybeMonad [Subst]
 unifyLists ListEmpty ListEmpty = return baseSubst
 unifyLists (ListChar s1) (ListChar s2) =
-  if s1 == s2 then return baseSubst else Nothing
-unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else Nothing
+  if s1 == s2 then return baseSubst else failure
+unifyLists (ListChar s) ListEmpty = if null s then return baseSubst else failure
 unifyLists ListEmpty (ListChar s) = unifyLists (ListChar s) ListEmpty
-unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then Nothing
+unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then failure
   else unifyLists (ListNonEmpty $ LEHead (List $ ListChar [head s]) (List $ ListChar $ tail s)) le
 unifyLists le@(ListNonEmpty _) lc@(ListChar _) = unifyLists lc le
 unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
@@ -171,19 +175,19 @@ unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
   unifyLE le1@(LEHead _ _) le2@(LESingle _) = unifyLE le2 le1
   unifyLE (LESeq t1 t2) (LEHead h t) = listUnify [t1, List $ ListNonEmpty t2] [h, t]
   unifyLE leh@(LEHead _ _) les@(LESeq _ _) = unifyLE les leh
-  unifyLE _ _ = Nothing
-unifyLists _ _ = Nothing
+  unifyLE _ _ = failure
+unifyLists _ _ = failure
 
 
 
-listUnify :: [Term] -> [Term] -> Maybe [Subst]
+listUnify :: [Term] -> [Term] -> ExceptMaybeMonad [Subst]
 listUnify [] [] = return [nullSubst]
 listUnify (t:ts) (r:rs) = do
   u <- unify t r
   return [u2 @@ u1 | u1 <- u,
                      let uu = concat $ listUnify (mapApply u1 ts) (mapApply u1 rs),
                      u2 <- uu]
-listUnify _ _ = Nothing
+listUnify _ _ = failure
 
 
 prooftree :: Database -> Int -> Subst -> [Term] -> IO Prooftree
@@ -194,7 +198,7 @@ prooftree db = pt where
     renamedClauses <- renameClauses n db g
     result <- sequence [ pt (n+1) (u@@s) (mapApply u (tp++gs)) |
                        (tm, tp) <- toTermPairs (traceShowId renamedClauses),
-                       u <- fromMaybe [] (unify g tm) ]
+                       u <- either (const []) id (fromMaybe (Right []) (runExceptT $ unify g tm)) ]
     return $ Choice result
 
 
