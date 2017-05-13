@@ -8,7 +8,7 @@ entrypoints Program ;
 
 rules Program ::= [Sentence] ;
 
-terminator nonempty Sentence "." ;
+terminator Sentence "." ;
 
 -- entrypoints Sentence ;
 

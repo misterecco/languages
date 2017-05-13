@@ -54,10 +54,10 @@ Name    :: { Name} : L_Name { Name ($1)}
 Variable    :: { Variable} : L_Variable { Variable ($1)}
 
 Program :: { Program }
-Program : ListSentence { AbsProlog.Program1 $1 }
+Program : ListSentence { AbsProlog.Program1 (reverse $1) }
 ListSentence :: { [Sentence] }
-ListSentence : Sentence '.' { (:[]) $1 }
-             | Sentence '.' ListSentence { (:) $1 $3 }
+ListSentence : {- empty -} { [] }
+             | ListSentence Sentence '.' { flip (:) $1 $2 }
 Sentence :: { Sentence }
 Sentence : Clause { AbsProlog.SentenceClause $1 }
          | '?-' Term { AbsProlog.Query $2 }

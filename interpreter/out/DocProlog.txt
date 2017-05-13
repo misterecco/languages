@@ -54,7 +54,7 @@ and **eps** (empty rule) belong to the BNF notation.
 All other symbols are terminals.
 
   | //Program// | -> | //[Sentence]// 
-  | //[Sentence]// | -> | //Sentence// ``.`` 
+  | //[Sentence]// | -> | **eps**
   |  |  **|**  | //Sentence// ``.`` //[Sentence]// 
   | //Sentence// | -> | //Clause// 
   |  |  **|**  | ``?-`` //Term// 
