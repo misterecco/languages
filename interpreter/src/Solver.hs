@@ -1,11 +1,9 @@
 module Solver where
 
-import Db
 import AbsProlog
-import Unifier
+import Db
 import Extensions
-
-import Debug.Trace
+import Unifier
 
 import Control.Monad.Except
 import Data.List (nub, intersperse)
@@ -22,13 +20,13 @@ printSubs ts s = if null subs then ["true"] else subs where
 filterVar :: Term -> [Variable] -> [Variable]
 filterVar (Var v) acc = v : acc
 filterVar (Funct _ terms) acc = filterVars terms ++ acc
-filterVar (List l) acc = foo l acc
+filterVar (List l) acc = filterVarList l acc
   where
-    foo (ListNonEmpty le) acc = foo2 le acc
-    foo _ acc = acc
-    foo2 (LESingle t) acc = filterVar t acc
-    foo2 (LESeq t le) acc = filterVar t (foo2 le acc)
-    foo2 (LEHead h t) acc = filterVar h (filterVar t acc)
+    filterVarList (ListNonEmpty le) acc = filterVarLE le acc
+    filterVarList _ acc = acc
+    filterVarLE (LESingle t) acc = filterVar t acc
+    filterVarLE (LESeq t le) acc = filterVar t (filterVarLE le acc)
+    filterVarLE (LEHead h t) acc = filterVar h (filterVar t acc)
 filterVar _ acc = acc
 
 
@@ -81,7 +79,7 @@ ptTerm :: Database -> Int -> Subst -> Term -> [Term] -> ExceptMonad Prooftree
 ptTerm db n s g gs = do
   renamedClauses <- renameClauses n db g
   result <- sequence [ pt db (n+1) (u@@s) (mapApply u (tp++gs)) |
-                     (tm, tp) <- toTermPairs (traceShowId renamedClauses),
+                     (tm, tp) <- toTermPairs renamedClauses,
                      u <- unify g tm ]
   return $ Choice result
 
@@ -90,7 +88,7 @@ checkNegate :: Database -> Term -> ExceptMaybeMonad [Subst]
 checkNegate db (OpNegate t) =
   case runExcept $ prove db [t] of
     Left err -> fail err
-    Right subs -> if null subs then return [] else ExceptT Nothing
+    Right subs -> if null subs then return [] else failure
 checkNegate db t = throwError $ "Expected negation term, found: " ++ show t
 
 
@@ -128,7 +126,7 @@ search (Choice pts) = do
 
 prove :: Database -> [Term] -> ExceptMonad [Subst]
 prove db t = do
-  prooftree <- pt db 1 nullSubst (traceShowId t)
+  prooftree <- pt db 1 nullSubst t
   search prooftree
 
 

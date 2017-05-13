@@ -12,9 +12,10 @@ import System.IO.Error (catchIOError, ioeGetErrorString)
 
 
 runSentence :: Sentence -> StateWriterMonad ()
-runSentence (Query q) = do
+runSentence q@(Query t) = do
   db <- get
-  liftIO $ solve db q
+  liftIO $ print q
+  liftIO $ solve db t
 runSentence (SentenceClause c) = addClause c
 
 
@@ -23,9 +24,7 @@ runSentences = mapM_ runSentence
 
 
 runProgram :: Program -> IO ()
-runProgram (Program1 sentences) = do
-  db <- execStateT (runSentences sentences) emptyDatabase
-  putStrLn $ unlines $ dataBaseToString db
+runProgram (Program1 sentences) = evalStateT (runSentences sentences) emptyDatabase
 
 
 runProlog :: String -> IO ()

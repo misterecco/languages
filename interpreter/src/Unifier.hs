@@ -10,8 +10,8 @@ type Subst = Variable -> Term
 data Prooftree = Done Subst | Choice [Prooftree]
 
 
-failure :: [Subst]
-failure = []
+noSubst :: [Subst]
+noSubst = []
 
 
 nullSubst :: Subst
@@ -80,23 +80,22 @@ unify (Var x) (Var y) = if x == y then baseSubst else [x ->> Var y]
 unify (Var x) l@(List _) = [x ->> l]
 unify (Var x) c@(Const _) = [x ->> c]
 unify (Var x) f@(Funct _ _) = [x ->> f]
-unify (Var x) _ = failure
+unify (Var x) _ = noSubst
 unify t v@(Var x) = unify v t
 unify (Funct name1 terms1) (Funct name2 terms2) =
-  if name1 == name2 then listUnify terms1 terms2 else failure
+  if name1 == name2 then listUnify terms1 terms2 else noSubst
 unify (List l1) (List l2) = unifyLists l1 l2
-unify (Const x) (Const y) = if x == y then baseSubst else failure
-unify _ _ = failure
--- TODO: unify other types of terms
+unify (Const x) (Const y) = if x == y then baseSubst else noSubst
+unify _ _ = noSubst
 
 
 unifyLists :: Lst -> Lst -> [Subst]
 unifyLists ListEmpty ListEmpty = baseSubst
 unifyLists (ListChar s1) (ListChar s2) =
-  if s1 == s2 then baseSubst else failure
-unifyLists (ListChar s) ListEmpty = if null s then baseSubst else failure
+  if s1 == s2 then baseSubst else noSubst
+unifyLists (ListChar s) ListEmpty = if null s then baseSubst else noSubst
 unifyLists ListEmpty (ListChar s) = unifyLists (ListChar s) ListEmpty
-unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then failure
+unifyLists (ListChar s) le@(ListNonEmpty _) = if null s then noSubst
   else unifyLists (ListNonEmpty $ LEHead (List $ ListChar [head s]) (List $ ListChar $ tail s)) le
 unifyLists le@(ListNonEmpty _) lc@(ListChar _) = unifyLists lc le
 unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
@@ -108,8 +107,8 @@ unifyLists (ListNonEmpty le1) (ListNonEmpty le2) = unifyLE le1 le2 where
   unifyLE le1@(LEHead _ _) le2@(LESingle _) = unifyLE le2 le1
   unifyLE (LESeq t1 t2) (LEHead h t) = listUnify [t1, List $ ListNonEmpty t2] [h, t]
   unifyLE leh@(LEHead _ _) les@(LESeq _ _) = unifyLE les leh
-  unifyLE _ _ = failure
-unifyLists _ _ = failure
+  unifyLE _ _ = noSubst
+unifyLists _ _ = noSubst
 
 
 listUnify :: [Term] -> [Term] -> [Subst]
@@ -118,4 +117,4 @@ listUnify (t:ts) (r:rs) =
   [u2 @@ u1 | u1 <- unify t r,
                      let uu = listUnify (mapApply u1 ts) (mapApply u1 rs),
                      u2 <- uu]
-listUnify _ _ = failure
+listUnify _ _ = noSubst

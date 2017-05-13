@@ -29,7 +29,7 @@ dataBaseToString = M.foldrWithKey foo []
 addTerm :: Term -> Clause -> StateWriterMonad ()
 addTerm (Funct name args) clause = modify $ addToDb (name, length args) [clause]
 addTerm (Const (Atom name)) clause = modify $ addToDb (name, 0) [clause]
-addTerm term _ = liftIO $ fail $ "Unexpected term: " ++ show term
+addTerm term _ = liftIO $ fail $ "Unexpected term as a clause head: " ++ show term
 
 
 addClause :: Clause -> StateWriterMonad ()
