@@ -30,7 +30,7 @@ runProlog s = let ts = myLexer s in case pProgram ts of
    Bad s    -> fail "Parse failed..."
    Ok  tree -> runProgram tree
 
-
+-- TODO: print this to stderr
 errorHandler :: IOError -> IO ()
 errorHandler e = putStrLn $ "ERROR: " ++ ioeGetErrorString e
 

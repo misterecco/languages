@@ -41,41 +41,41 @@ calculate c@(Const (Number _)) = return c
 calculate t = throwError $ "Expected arithmetic expression or constant, found: " ++ show t
 
 
-check :: Database -> Term -> ExceptMaybeMonad [Subst]
-check db (OpUnifies t1 t2) = do
+check :: Term -> ExceptMaybeMonad [Subst]
+check (OpUnifies t1 t2) = do
   let s1 = unify t1 t2
   if null s1 then ExceptT Nothing else return s1
-check db (OpNotUnifies t1 t2) = do
+check (OpNotUnifies t1 t2) = do
   let s1 = unify t1 t2
   if null s1 then return [] else ExceptT Nothing
-check db (OpEqual t1 t2) = if t1 == t2 then return [] else ExceptT Nothing
-check db (OpNotEqual t1 t2) = if t1 /= t2 then return [] else ExceptT Nothing
-check db (OpNegate t) = return []
-check db (OpArIs t1 t2) = do
+check (OpEqual t1 t2) = if t1 == t2 then return [] else ExceptT Nothing
+check (OpNotEqual t1 t2) = if t1 /= t2 then return [] else ExceptT Nothing
+check (OpArIs t1 t2) = do
   num <- calculate t2
-  return $ unify t1 num
-check db (OpArEqual t1 t2) = do
+  let s1 = unify t1 num
+  if null s1 then ExceptT Nothing else return s1
+check (OpArEqual t1 t2) = do
   Const (Number n1) <- calculate t1
   Const (Number n2) <- calculate t2
   if n1 == n2 then return [] else ExceptT Nothing
-check db (OpArNotEqual t1 t2) = do
+check (OpArNotEqual t1 t2) = do
   Const (Number n1) <- calculate t1
   Const (Number n2) <- calculate t2
   if n1 /= n2 then return [] else ExceptT Nothing
-check db (OpArLt t1 t2) = do
+check (OpArLt t1 t2) = do
   Const (Number n1) <- calculate t1
   Const (Number n2) <- calculate t2
   if n1 < n2 then return [] else ExceptT Nothing
-check db (OpArLte t1 t2) = do
+check (OpArLte t1 t2) = do
   Const (Number n1) <- calculate t1
   Const (Number n2) <- calculate t2
   if n1 <= n2 then return [] else ExceptT Nothing
-check db (OpArGt t1 t2) = do
+check (OpArGt t1 t2) = do
   Const (Number n1) <- calculate t1
   Const (Number n2) <- calculate t2
   if n1 > n2 then return [] else ExceptT Nothing
-check db (OpArGte t1 t2) = do
+check (OpArGte t1 t2) = do
   Const (Number n1) <- calculate t1
   Const (Number n2) <- calculate t2
   if n1 >= n2 then return [] else ExceptT Nothing
-check db t = throwError $ "Unexpected term: " ++ show t
+check t = throwError $ "Unexpected term: " ++ show t

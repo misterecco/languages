@@ -8,18 +8,15 @@ import Extensions
 import Debug.Trace
 
 import Control.Monad.Except
-import Data.List (nub)
+import Data.List (nub, intersperse)
 import Data.List.Split (splitOn)
-import Data.Maybe (catMaybes, fromMaybe)
 
 import qualified Data.Map as M
-
-import System.IO.Error (catchIOError, ioeGetErrorString)
 
 
 printSubs :: [Variable] -> Subst -> [String]
 printSubs ts s = if null subs then ["true"] else subs where
-  subs = [show t ++ " = " ++ show sub | t <- ts, let sub = s t, sub /= Var t ]
+  subs = intersperse "," [show t ++ " = " ++ show sub | t <- ts, let sub = s t, sub /= Var t ]
 
 
 filterVar :: Term -> [Variable] -> [Variable]
@@ -89,10 +86,18 @@ ptTerm db n s g gs = do
   return $ Choice result
 
 
+checkNegate :: Database -> Term -> ExceptMaybeMonad [Subst]
+checkNegate db (OpNegate t) =
+  case runExcept $ prove db [t] of
+    Left err -> fail err
+    Right subs -> if null subs then return [] else ExceptT Nothing
+checkNegate db t = throwError $ "Expected negation term, found: " ++ show t
+
+
 -- extensions to prolog (non-declarative constructs)
-ptExt :: Database -> Int -> Subst -> Term -> [Term] -> ExceptMonad Prooftree
-ptExt db n s g gs =
-  case runExceptT $ check db g of
+ptExt :: (Term -> ExceptMaybeMonad [Subst]) -> Database -> Int -> Subst -> Term -> [Term] -> ExceptMonad Prooftree
+ptExt c db n s g gs =
+  case runExceptT $ c g of
     Nothing -> return $ Choice []
     Just x -> case x of
       Left err -> throwError err
@@ -109,7 +114,8 @@ pt db n s (g:gs) = case g of
   (Var _) -> ptTerm db n s g gs
   (Const _) -> ptTerm db n s g gs
   (List _) -> ptTerm db n s g gs
-  _ -> ptExt db n s g gs
+  (OpNegate _) -> ptExt (checkNegate db) db n s g gs
+  _ -> ptExt check db n s g gs
 
 
 search :: Prooftree -> ExceptMonad [Subst]
@@ -134,7 +140,7 @@ solve db func@(Funct name terms) = do
   let vars = filterVars terms
   case runExcept $ prove db [func] of
     Left err -> fail err
-    Right subs -> do
+    Right subs -> if null subs then putStrLn "false" else do
       let results = map (printSubs vars) subs
       let printable = map unwords results
       putStrLn $ unlines printable
