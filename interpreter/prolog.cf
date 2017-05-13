@@ -13,7 +13,6 @@ terminator nonempty Sentence "." ;
 -- entrypoints Sentence ;
 
 rules      Sentence ::= Clause ;
-Directive. Sentence ::= ":-" Term ;
 Query.     Sentence ::= "?-" Term ;
 
 Rule.       Clause ::= Term ":-" [Term] ;

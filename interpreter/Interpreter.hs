@@ -1,40 +1,45 @@
 module Main where
 
-import Solver
-import Db
-import ParProlog
 import AbsProlog
+import Db
 import ErrM
+import ParProlog
+import Solver
 
-import System.IO.Error (catchIOError, ioeGetErrorString)
 import Control.Monad.State
+import System.IO (hPutStrLn, stderr)
+import System.IO.Error (catchIOError, ioeGetErrorString)
 
 
 runSentence :: Sentence -> StateWriterMonad ()
-runSentence (Directive d) = return ()
 runSentence (Query q) = do
   db <- get
   liftIO $ solve db q
 runSentence (SentenceClause c) = addClause c
 
+
 runSentences :: [Sentence] -> StateWriterMonad ()
 runSentences = mapM_ runSentence
+
 
 runProgram :: Program -> IO ()
 runProgram (Program1 sentences) = do
   db <- execStateT (runSentences sentences) emptyDatabase
   putStrLn $ unlines $ dataBaseToString db
 
+
 runProlog :: String -> IO ()
 runProlog s = let ts = myLexer s in case pProgram ts of
    Bad s    -> fail "Parse failed..."
    Ok  tree -> runProgram tree
 
--- TODO: print this to stderr
+
 errorHandler :: IOError -> IO ()
-errorHandler e = putStrLn $ "ERROR: " ++ ioeGetErrorString e
+errorHandler e = hPutStrLn stderr $ "ERROR: " ++ ioeGetErrorString e
+
 
 processInput :: IO ()
 processInput = getContents >>= runProlog
+
 
 main = processInput `catchIOError` errorHandler

@@ -95,7 +95,6 @@ instance Print Program where
 instance Print Sentence where
   prt i e = case e of
     SentenceClause clause -> prPrec i 0 (concatD [prt 0 clause])
-    Directive term -> prPrec i 0 (concatD [doc (showString ":-"), prt 0 term])
     Query term -> prPrec i 0 (concatD [doc (showString "?-"), prt 0 term])
   prtList _ [x] = (concatD [prt 0 x, doc (showString ".")])
   prtList _ (x:xs) = (concatD [prt 0 x, doc (showString "."), prt 0 xs])

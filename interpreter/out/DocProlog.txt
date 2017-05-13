@@ -37,7 +37,7 @@ The reserved words used in prolog are the following:
   | ``is`` | ``mod`` |  | 
 
 The symbols used in prolog are the following:
-  | . | :- | ?- | ,
+  | . | ?- | :- | ,
   | ( | ) | \+ | =
   | \= | == | \== | =:=
   | =\= | < | > | =<
@@ -57,7 +57,6 @@ All other symbols are terminals.
   | //[Sentence]// | -> | //Sentence// ``.`` 
   |  |  **|**  | //Sentence// ``.`` //[Sentence]// 
   | //Sentence// | -> | //Clause// 
-  |  |  **|**  | ``:-`` //Term// 
   |  |  **|**  | ``?-`` //Term// 
   | //Clause// | -> | //Term// ``:-`` //[Term]// 
   |  |  **|**  | //Term// 

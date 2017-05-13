@@ -20,12 +20,11 @@ instance Show Program where
   show (Program1 sentences) = unlines $ map show sentences
 
 
-data Sentence = SentenceClause Clause | Directive Term | Query Term
+data Sentence = SentenceClause Clause | Query Term
   deriving (Eq, Ord, Read)
 
 instance Show Sentence where
   show (Query t) = "?- " ++ show t ++ "."
-  show (Directive t) = ":- " ++ show t ++ "."
   show (SentenceClause c) = show c ++ "."
 
 

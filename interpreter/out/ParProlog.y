@@ -60,7 +60,6 @@ ListSentence : Sentence '.' { (:[]) $1 }
              | Sentence '.' ListSentence { (:) $1 $3 }
 Sentence :: { Sentence }
 Sentence : Clause { AbsProlog.SentenceClause $1 }
-         | ':-' Term { AbsProlog.Directive $2 }
          | '?-' Term { AbsProlog.Query $2 }
 Clause :: { Clause }
 Clause : Term ':-' ListTerm { AbsProlog.Rule $1 $3 }
