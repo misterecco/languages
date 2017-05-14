@@ -57,7 +57,7 @@ All other symbols are terminals.
   | //[Sentence]// | -> | **eps**
   |  |  **|**  | //Sentence// ``.`` //[Sentence]// 
   | //Sentence// | -> | //Clause// 
-  |  |  **|**  | ``?-`` //Term// 
+  |  |  **|**  | ``?-`` //[Term]// 
   | //Clause// | -> | //Term// ``:-`` //[Term]// 
   |  |  **|**  | //Term// 
   | //[Term]// | -> | //Term// 

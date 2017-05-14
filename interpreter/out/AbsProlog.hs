@@ -20,11 +20,11 @@ instance Show Program where
   show (Program1 sentences) = unlines $ map show sentences
 
 
-data Sentence = SentenceClause Clause | Query Term
+data Sentence = SentenceClause Clause | Query [Term]
   deriving (Eq, Ord, Read)
 
 instance Show Sentence where
-  show (Query t) = "?- " ++ show t ++ "."
+  show (Query ts) = "?- " ++ intercalate ", " (map show ts) ++ "."
   show (SentenceClause c) = show c ++ "."
 
 
@@ -32,8 +32,8 @@ data Clause = Rule Term [Term] | UnitClause Term
   deriving (Eq, Ord, Read)
 
 instance Show Clause where
-  show (Rule h g) = show h ++ " :- " ++ show g
-  show (UnitClause t) = show t
+  show (Rule h gs) = show h ++ " :- " ++ intercalate ", " (map show gs) ++ "."
+  show (UnitClause t) = show t ++ "."
 
 data Term
     = OpNegate Term
@@ -83,7 +83,6 @@ instance Show Term where
   show (Var v)              = show v
   show (Const c)            = show c
   show (List l)             = show l
-
 
 data Lst = ListEmpty | ListNonEmpty ListExpr | ListChar String
   deriving (Eq, Ord, Read)

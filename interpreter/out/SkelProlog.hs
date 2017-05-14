@@ -21,7 +21,7 @@ transProgram x = case x of
 transSentence :: Sentence -> Result
 transSentence x = case x of
   SentenceClause clause -> failure x
-  Query term -> failure x
+  Query terms -> failure x
 transClause :: Clause -> Result
 transClause x = case x of
   Rule term terms -> failure x

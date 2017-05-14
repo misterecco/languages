@@ -60,7 +60,7 @@ ListSentence : {- empty -} { [] }
              | ListSentence Sentence '.' { flip (:) $1 $2 }
 Sentence :: { Sentence }
 Sentence : Clause { AbsProlog.SentenceClause $1 }
-         | '?-' Term { AbsProlog.Query $2 }
+         | '?-' ListTerm { AbsProlog.Query $2 }
 Clause :: { Clause }
 Clause : Term ':-' ListTerm { AbsProlog.Rule $1 $3 }
        | Term { AbsProlog.UnitClause $1 }

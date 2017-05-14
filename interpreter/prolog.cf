@@ -13,7 +13,7 @@ terminator Sentence "." ;
 -- entrypoints Sentence ;
 
 rules      Sentence ::= Clause ;
-Query.     Sentence ::= "?-" Term ;
+Query.     Sentence ::= "?-" [Term] ;
 
 Rule.       Clause ::= Term ":-" [Term] ;
 UnitClause. Clause ::= Term ;

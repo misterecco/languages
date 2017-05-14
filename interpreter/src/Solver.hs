@@ -6,15 +6,15 @@ import Extensions
 import Unifier
 
 import Control.Monad.Except
-import Data.List (nub, intersperse)
+import Data.List (nub, intercalate)
 import Data.List.Split (splitOn)
 
 import qualified Data.Map as M
 
 
-printSubs :: [Variable] -> Subst -> [String]
-printSubs ts s = if null subs then ["true"] else subs where
-  subs = intersperse "," [show t ++ " = " ++ show sub | t <- ts, let sub = s t, sub /= Var t ]
+printSubs :: [Variable] -> Subst -> String
+printSubs ts s = if null subs then "true" else intercalate ", " subs where
+  subs = [show t ++ " = " ++ show sub | t <- ts, let sub = s t, sub /= Var t ]
 
 
 filterVar :: Term -> [Variable] -> [Variable]
@@ -130,16 +130,19 @@ prove db t = do
   search prooftree
 
 
-solve :: Database -> Term -> IO ()
-solve db c@(Const (Atom a)) = case runExcept $ prove db [c] of
-  Left err -> fail err
-  Right subs -> if null subs then putStrLn "false" else putStrLn "true"
-solve db func@(Funct name terms) = do
+sanitizeQuery :: [Term] -> IO ()
+sanitizeQuery [] = return ()
+sanitizeQuery (Const (Atom _) : ts) = sanitizeQuery ts
+sanitizeQuery (Funct _ _ : ts) = sanitizeQuery ts
+sanitizeQuery (t : ts) = fail $ "Wrong type of term in query: " ++ show t
+
+
+solve :: Database -> [Term] -> IO ()
+solve db terms = do
+  _ <- sanitizeQuery terms
   let vars = filterVars terms
-  case runExcept $ prove db [func] of
+  case runExcept $ prove db terms of
     Left err -> fail err
     Right subs -> if null subs then putStrLn "false" else do
       let results = map (printSubs vars) subs
-      let printable = map unwords results
-      putStrLn $ unlines printable
-solve db t = fail $ "Wrong type of term in query: " ++ show t
+      putStr $ unlines results
