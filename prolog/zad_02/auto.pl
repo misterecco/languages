@@ -3,57 +3,23 @@
  * Zadanie 2 JPP - prolog
  */
 
+:- [fixtures].
+:- [printers].
+
 :- use_module(library(lists)).
-
-prodList(pl1, [
-        prod(`Z`, [
-            [nt(`F`), `#`]
-        ]),
-        prod(`F`, [
-            [`(`, nt(`L`), `)`]
-        ]),
-        prod(`L`, [
-            [nt(`E`), nt(`L`)],
-            []
-        ]),
-        prod(`E`, [
-            [nt(`F`)],
-            [`a`]
-        ])
-    ]
-).
-
-productionList(X, Y) :- 
-  prodList(X, L),
-  flattenProductions(L, Y).
-
-initialProd(p1, production(`Z`, [dot, nt(`F`), `#`])).
-initialProd(p2, production(`F`, [`(`, dot, nt(`L`), `)`])).
-
-printList([]).
-printList([H | T]) :- 
-  write(H),   
-  nl, 
-  printList(T).
-
-% ?- productionList(pl1, PL), initialProd(p1, P), expandSituation(P, PL, EP).
-% ?- productionList(pl1, PL), initialProd(p1, P), expandSituation(P, PL, EP), printList(EP).
 
 
 % gramatyka(SymbolPoczatkowy, ZbiorProdukcji).
 % prod(NazwaNieterminala, ListaPrawychStronProdukcji)
 % nt(Nieterminal)
 
-% expandGrammar(Gramatyka, RozszerzonaListaProdukcji)
-% createSituationSets(ListaProdukcji, ZbiorySytuacjiLR)
-% createAutomaton(ZbiorySytuacjiLR, Automat, Info)
-% createSituationSet(PoczątkoweSytuacje, ListaProdukcji, ZbiórSytuacjiLR)
-% addSituationSet(ListaZbiorówSytacji, NowyZbiórSytacji, NowaListaZbiorówSytuacji)
-
-
 % transition(Symbol, NumerSytuacji)
 % situationSet(Produkcje, Przejścia)
 % automat(ListaProdukcji, TabelaActionGoTo)
+
+
+% createAutomaton(ZbiorySytuacjiLR, Automat, Info)
+
 
 createLR(Grammar, Automat, Info) :- 
   expandGrammar(Grammar, ProductionList),
@@ -61,55 +27,73 @@ createLR(Grammar, Automat, Info) :-
   createAutomaton(SituationSets, Automat, Info).
 
 
+% expandGrammar(Gramatyka, RozszerzonaListaProdukcji)
 expandGrammar(gramatyka(InitialSymbol, ProductionList), ExplandedProductionList) :-
   flattenProductions(ProductionList, FlatProductionList),
   addInitialProduction(InitialSymbol, FlatProductionList, ExplandedProductionList).
 
 
+% flattenProductions(ListaProdukcji, PłaskaListaProdukcji)
 flattenProductions(ProductionList, FlatProductionList) :- flattenProductions(ProductionList, [], FlatProductionList).
 
-flattenProductions([], FlatProductionList, FlatProductionList).
+flattenProductions([], Acc, FlatProductionList) :- reverse(Acc, FlatProductionList).
 flattenProductions([prod(Symbol, [H | T]) | ProdTail], Acc, FlatProductionList) :- 
   flattenProductions([prod(Symbol, T) | ProdTail], [production(Symbol, H) | Acc], FlatProductionList).
 flattenProductions([prod(_, []) | ProdTail], Acc, FlatProductionList) :-
   flattenProductions(ProdTail, Acc, FlatProductionList).
 
 
+% addInitialProduction(PoczątkowySymbol, ListaProdukcji, RozszerzonaListaProdukcji)
 addInitialProduction(InitialSymbol, FlatProductionList, [production(`Z`, [ InitialSymbol, `#`]) | FlatProductionList]).
   
 
-expandSituationSet(InitialSituationSet, ProductionList, FinalSituationSet) :-
-  expandSituationSet(InitialSituationSet, ProductionList, [], FinalSituationSet).
+% createSituationSets(ListaProdukcji, ZbiorySytuacjiLR)
+createSituationSets(ProductionList, SituationSets) :- 
+  ProductionList = [production(`Z`, RH) | _],
+  createSituationSets(ProductionList, [[production(`Z`, [dot | RH])]], [], SituationSets).
 
-expandSituationSet([], _, FinalSituationSet, FinalSituationSet).
-expandSituationSet([H | T], ProductionList, Acc, FinalSituationSet) :- 
-  expandSituation(H, ProductionList, EH),
-  append(Acc, EH, NewAcc),
-  remove_dups(NewAcc, SortedNewAcc),
-  expandSituationSet(T, ProductionList, SortedNewAcc, FinalSituationSet).
+%createSituationSets(ListaProdukcji, ZbiorySytuacjiDoPrzetworzenia, Akumulator, ListaZbiorówSytuacji)
+createSituationSets(_, [], Acc, Result) :- reverse(Acc, Result).
+createSituationSets(LP, [H | T], Acc, Result) :-
+  expandSituationSet(H, LP, EH),
+  ( member(EH, Acc)
+    -> createSituationSets(LP, T, Acc, Result)
+    ; (
+      nextSituations(EH, NewSets),
+      append(NewSets, T, NT),
+      createSituationSets(LP, NT, [EH | Acc], Result)
+    )
+  ).
 
 
-remove_dups(List, Set) :- % built in in sicstus
-  list_to_set(List, SList),
-  sort(SList, Set).
+nextSituations(SituationSet, Result) :- 
+  allAfterDot(SituationSet, SymbolList),
+  nextSituations(SymbolList, SituationSet, [], Result).
+
+nextSituations([], _, Acc, Result) :- remove_dups(Acc, Result).
+nextSituations([H | T], SituationSet, Acc, Result) :-
+  goto(SituationSet, H, NewSet),
+  nextSituations(T, SituationSet, [NewSet | Acc], Result).
 
 
-expandSituation(Situation, ProductionList, ResultSitutationSet) :- 
-  expandSituation([Situation], ProductionList, [], ResultSitutationSet).
+% createSituationSet(PoczątkoweSytuacje, ListaProdukcji, ZbiórSytuacjiLR)
+expandSituationSet(InitialSituationSet, ProductionList, ResultSitutationSet) :- 
+  expandSituationSet(InitialSituationSet, ProductionList, [], ResultSitutationSet).
 
-expandSituation([], _, ResultSitutationSet, SortedResult) :- sort(ResultSitutationSet, SortedResult).
-expandSituation([H | T], ProductionList, Acc, ResultSitutationSet) :-
+expandSituationSet([], _, ResultSitutationSet, SortedResult) :- sort(ResultSitutationSet, SortedResult).
+expandSituationSet([H | T], ProductionList, Acc, ResultSitutationSet) :-
   member(H, Acc),
-  expandSituation(T, ProductionList, Acc, ResultSitutationSet).
-expandSituation([H | T], ProductionList, Acc, ResultSitutationSet) :-
+  expandSituationSet(T, ProductionList, Acc, ResultSitutationSet).
+expandSituationSet([H | T], ProductionList, Acc, ResultSitutationSet) :-
   \+ member(H, Acc), % nonmember in sicstus
-  ( nextToDot(H, S)
+  ( nonterminalAfterDot(H, S)
     -> ( productionsForSymbol(S, ProductionList, Prods),
          append(T, Prods, ET),
          remove_dups(ET, PET),
-         expandSituation(PET, ProductionList, [H | Acc], ResultSitutationSet) )
-    ;  expandSituation(T, ProductionList, [H | Acc], ResultSitutationSet)
+         expandSituationSet(PET, ProductionList, [H | Acc], ResultSitutationSet) )
+    ;  expandSituationSet(T, ProductionList, [H | Acc], ResultSitutationSet)
   ).
+
 
 productionsForSymbol(Symbol, Productions, Result) :- productionsForSymbol(Symbol, Productions, [], Result).
 
@@ -120,21 +104,47 @@ productionsForSymbol(S, [production(X, Prod) | Tail], Acc, Result) :-
    ;  productionsForSymbol(S, Tail, Acc, Result)
   ).
 
-nextToDot(production(_, [dot, nt(X) | _]), X).
-nextToDot(production(S, [_ | T]), Result) :- nextToDot(production(S, T), Result).
-  
 
-% TODO: make it more efficient (at least use open list or acc)
-addSituationSet(SituationSetList, NewSet, NewSituationSetList) :-
-  sort(NewSet, SortedNewSet),
-  ( member(SortedNewSet, SituationSetList)
-    -> NewSituationSetList = SituationSetList
-    ; append(SituationSetList, [SortedNewSet], NewSituationSetList) 
+nonterminalAfterDot(production(_, [dot, nt(X) | _]), X).
+nonterminalAfterDot(production(S, [_ | T]), Result) :- nonterminalAfterDot(production(S, T), Result).
+
+
+symbolAfterDot(production(_, [dot, X | _]), X).
+symbolAfterDot(production(S, [_ | T]), Result) :- symbolAfterDot(production(S, T), Result).
+
+
+allAfterDot(ProductionList, SymbolList) :- allAfterDot(ProductionList, [], SymbolList).
+
+allAfterDot([], SymbolList, SortedSymbolList) :- remove_dups(SymbolList, SortedSymbolList).
+allAfterDot([H | T], Acc, Result) :-
+  symbolAfterDot(H, S)
+  -> allAfterDot(T, [S | Acc], Result)
+  ;  allAfterDot(T, Acc, Result).
+
+
+goto(SituationSet, Symbol, Result) :- goto(SituationSet, Symbol, [], Result).
+
+goto([], _, Result, SortedResult) :- remove_dups(Result, SortedResult).
+goto([H | T], Symbol, Acc, Result) :- 
+  ( symbolAfterDot(H, Symbol) 
+    -> ( moveDot(H, NH),
+         goto(T, Symbol, [NH | Acc], Result) )
+    ; goto(T, Symbol, Acc, Result)
   ).
 
 
+moveDot(Before, After) :- moveDot(Before, [], After).
 
+moveDot(production(S, [dot, X | Tail]), Acc, production(S, Result)) :- 
+  reverse(Acc, RevAcc),
+  append(RevAcc, [X, dot | Tail], Result).
+moveDot(production(S, [X | Tail]), Acc, Result) :-
+  X \= dot,
+  moveDot(production(S, Tail), [X | Acc], Result).
+  
 
-
+remove_dups(List, Set) :- % built in in sicstus
+  list_to_set(List, SList),
+  sort(SList, Set).
 
 accept(_, _) :- true.
