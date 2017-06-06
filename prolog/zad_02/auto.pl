@@ -14,177 +14,204 @@
 % prod(NazwaNieterminala, ListaPrawychStronProdukcji)
 % nt(Nieterminal)
 
-% production(NazwaNieterminala, PrawaStronaProdukcji)
-% situationSet(Produkcje, SkądPrzychodzę), SkądPrzychodzę - lista par - litera, numer
+% pr(NazwaNieterminala, PrawaStronaProdukcji)
+% state(Produkcje, KrawędziePrzychodzące)
 
 % transition(Symbol, NumerSytuacji)
 % automat(ListaProdukcji, TabelaActionGoTo)
 
 
-% createAutomaton(ZbiorySytuacjiLR, Automat, Info)
 
-
+% createLR(Gramatyka, Automat, Info)
 createLR(Grammar, Automat, Info) :-
-  expandGrammar(Grammar, ProductionList),
-  createSituationSets(ProductionList, SituationSetList),
-  createAutomaton(SituationSetList, Automat, Info).
+  expandGrammar(Grammar, ProdList),
+  createGraph(ProdList, StateList),
+  createAutomaton(StateList, Automat, Info).
 
 
 % expandGrammar(Gramatyka, RozszerzonaListaProdukcji)
-expandGrammar(gramatyka(InitialSymbol, ProductionList), ExplandedProductionList) :-
-  flattenProductions(ProductionList, FlatProductionList),
-  addInitialProduction(InitialSymbol, FlatProductionList, ExplandedProductionList).
+expandGrammar(gramatyka(InitialSymbol, ProdList), ExplandedProdList) :-
+  flattenProductions(ProdList, FlatProdList),
+  addInitialProduction(InitialSymbol, FlatProdList, ExplandedProdList).
 
 
 % flattenProductions(ListaProdukcji, SpłaszczonaListaProdukcji)
-flattenProductions(ProductionList, FlatProductionList) :- flattenProductions(ProductionList, [], FlatProductionList).
+flattenProductions(ProdList, FlatProdList) :-
+  flattenProductions(ProdList, [], FlatProdList).
 
-flattenProductions([], Acc, FlatProductionList) :- reverse(Acc, FlatProductionList).
-flattenProductions([prod(Symbol, [H | T]) | ProdTail], Acc, FlatProductionList) :-
-  flattenProductions([prod(Symbol, T) | ProdTail], [production(Symbol, H) | Acc], FlatProductionList).
-flattenProductions([prod(_, []) | ProdTail], Acc, FlatProductionList) :-
-  flattenProductions(ProdTail, Acc, FlatProductionList).
+% flattenProductions(ListaProdukcji, Akumulator, SpłaszczonaListaProdukcji)
+flattenProductions([], Acc, FlatProdList) :-
+  reverse(Acc, FlatProdList).
+flattenProductions([prod(S, [RHS | RHSTail]) | Tail], Acc, FlatProdList) :-
+  flattenProductions([prod(S, RHSTail) | Tail], [pr(S, RHS) | Acc], FlatProdList).
+flattenProductions([prod(_, []) | OtherProds], Acc, FlatProdList) :-
+  flattenProductions(OtherProds, Acc, FlatProdList).
 
 
 % addInitialProduction(PoczątkowySymbol, ListaProdukcji, RozszerzonaListaProdukcji)
-addInitialProduction(InitialSymbol, FlatProductionList, [production(`Z`, [ InitialSymbol, `#`]) | FlatProductionList]).
+addInitialProduction(S, ProdList, [pr(`Z`, [S, `#`]) | ProdList]).
 
 
-% createSituationSets(ListaProdukcji, ListaZbiorówSytuacji)
-createSituationSets(ProductionList, SituationSetList) :-
-  ProductionList = [production(`Z`, RH) | _],
-  createSituationSets(ProductionList, [ situationSet([production(`Z`, [dot | RH])], []) ], [], SituationSetList).
+% createGraph(ListaProdukcji, ListaStanów)
+createGraph(ProdList, StateList) :-
+  ProdList = [pr(`Z`, RHS) | _],
+  createGraph(ProdList, [ state([pr(`Z`, [dot | RHS])], []) ], [], StateList).
 
-% createSituationSets(ListaProdukcji, ZbiorySytuacjiDoPrzetworzenia, Akumulator, ListaZbiorówSytuacji)
-createSituationSets(_, [], Acc, Result) :- reverse(Acc, Result).
-createSituationSets(ProductionList, [H | T], Acc, Result) :-
-  H = situationSet(SituationSet, ComingFrom),
-  expandSituationSet(SituationSet, ProductionList, ExpandedSituationSet),
-  zipSituationSets(SituationSetList, _, Acc),
-  ( member(ExpandedSituationSet, SituationSetList)
+% createGraph(ListaProdukcji, StanyDoPrzetworzenia, Akumulator, ListaStanów)
+createGraph(_, [], Acc, StateList) :- reverse(Acc, StateList).
+createGraph(ProdList, [StateStub | Tail], Acc, StateList) :-
+  StateStub = state(SitSet, InEdges),
+  expandSituationSet(SitSet, ProdList, ExpSitSet),
+  zipStates(SituationSetList, _, Acc),
+  ( member(ExpSitSet, SituationSetList)
     -> (
-      addSituationSet(situationSet(ExpandedSituationSet, ComingFrom), Acc, NewAcc),
-      createSituationSets(ProductionList, T, NewAcc, Result)
+      addState(state(ExpSitSet, InEdges), Acc, NewAcc),
+      createGraph(ProdList, Tail, NewAcc, StateList)
     )
     ; (
-      length(Acc, SetNumber),
-      nextSituations(ExpandedSituationSet, SetNumber, NewSets),
-      mergeSituationSets(NewSets, T, NT),
-      createSituationSets(ProductionList, NT, [situationSet(ExpandedSituationSet, ComingFrom) | Acc], Result)
+      length(Acc, StateNumber),
+      nextStates(ExpSitSet, StateNumber, NewStateStubs),
+      mergeStates(NewStateStubs, Tail, MergedStates),
+      createGraph(ProdList, MergedStates, [state(ExpSitSet, InEdges) | Acc], StateList)
     )
   ).
 
 
-% zipSituationSets(ListaZbiorówSytuacji, ListaSkądPrzychodzę)
-zipSituationSets([], [], []).
-zipSituationSets([ProductionSet | PST], [ComingFrom | CFL],
-                 [situationSet(ProductionSet, ComingFrom) | SST]) :-
-  zipSituationSets(PST, CFL, SST).
+% zipStates(ListaZbiorówSytuacji, ListaZbiorówKrawędziWchodzących, ListaStanów)
+zipStates([], [], []).
+zipStates([SitSet | SitSetTail], [InEdges | InEdgesTail],
+                 [state(SitSet, InEdges) | OtherStates]) :-
+  zipStates(SitSetTail, InEdgesTail, OtherStates).
 
 
-mergeSituationSets([], SS, SS).
-mergeSituationSets([H | T], Acc, SS) :-
-  H = situationSet(SituationSet, _),
-  zipSituationSets(SituationSetList, _, Acc),
+% mergedStates(PierwszaListaStanów, DrugaListaStanów, ListaPołączonychStanów)
+mergeStates([], MergedStates, MergedStates).
+mergeStates([State | StateTail], Acc, MergedStates) :-
+  State = state(SituationSet, _),
+  zipStates(SituationSetList, _, Acc),
   ( member(SituationSet, SituationSetList)
     -> (
-        addSituationSet(H, Acc, NewAcc),
-        mergeSituationSets(T, NewAcc, SS)
+        addState(State, Acc, NewAcc),
+        mergeStates(StateTail, NewAcc, MergedStates)
       )
-    ; mergeSituationSets(T, [H | Acc], SS)
+    ; mergeStates(StateTail, [State | Acc], MergedStates)
   ).
 
-addSituationSet(S, Set, NewSet) :-
-  addSituationSet(S, Set, [], NewSet).
 
-addSituationSet(_, [], Acc, Result) :- reverse(Acc, Result).
-addSituationSet(S, [H | T], Acc, Result) :-
-  S = situationSet(Situations, Origins),
-  ( H = situationSet(Situations, O)
+% addState(Stan, ListaStanów, NowaListaStanów)
+addState(State, StateList, NewStateList) :-
+  addState(State, StateList, [], NewStateList).
+
+% addState(Stan, ListaStanów, Akumulator, NowaListaStanów)
+addState(_, [], ReversedStateList, StateList) :-
+  reverse(ReversedStateList, StateList).
+addState(State, [Head | Tail], Acc, Result) :-
+  State = state(SituationSet, InEdges),
+  ( Head = state(SituationSet, InEdgesHead)
     -> (
-      append(Origins, O, R),
-      remove_dups(R, Rs),
-      addSituationSet(S, T, [situationSet(Situations, Rs) | Acc], Result)
+      append(InEdges, InEdgesHead, AllInEdges),
+      remove_dups(AllInEdges, DedupedInEdges),
+      addState(State, Tail, [state(SituationSet, DedupedInEdges) | Acc], Result)
     )
-    ; addSituationSet(S, T, [H | Acc], Result)
+    ; addState(State, Tail, [Head | Acc], Result)
   ).
 
 
-nextSituations(SituationSet, SetNumber, Result) :-
+% nextStates(ZbiórSytuacji, NumberStanu, NoweStany)
+nextStates(SituationSet, StateNumber, NewStates) :-
   allAfterDot(SituationSet, SymbolList),
-  nextSituations(SymbolList, SituationSet, SetNumber, [], Result).
+  nextStates(SymbolList, SituationSet, StateNumber, [], NewStates).
 
-nextSituations([], _, _, Result, Result).
-nextSituations([H | T], SituationSet, SetNumber, Acc, Result) :-
-  goto(SituationSet, H, NewSet),
-  nextSituations(T, SituationSet, SetNumber, [situationSet(NewSet, [(H, SetNumber)]) | Acc], Result).
+% nextStates(ListaSymboli, ZbiórSytuacji, NumberStanu, Akumulator, NoweStany)
+nextStates([], _, _, NewStates, NewStates).
+nextStates([Symbol | Tail], SituationSet, StateNumber, Acc, NewStates) :-
+  transition(SituationSet, Symbol, NewSet),
+  nextStates(Tail, SituationSet, StateNumber,
+             [state(NewSet, [ed(Symbol, StateNumber)]) | Acc], NewStates).
 
 
 % createSituationSet(PoczątkoweSytuacje, ListaProdukcji, ZbiórSytuacjiLR)
-expandSituationSet(InitialSituationSet, ProductionList, ResultSitutationSet) :-
-  expandSituationSet(InitialSituationSet, ProductionList, [], ResultSitutationSet).
+expandSituationSet(InitialSituationSet, ProdList, ResultSitutationSet) :-
+  expandSituationSet(InitialSituationSet, ProdList, [], ResultSitutationSet).
 
-expandSituationSet([], _, ResultSitutationSet, SortedResult) :- sort(ResultSitutationSet, SortedResult).
-expandSituationSet([H | T], ProductionList, Acc, ResultSitutationSet) :-
-  member(H, Acc),
-  expandSituationSet(T, ProductionList, Acc, ResultSitutationSet).
-expandSituationSet([H | T], ProductionList, Acc, ResultSitutationSet) :-
-  nonmember(H, Acc),
-  ( nonterminalAfterDot(H, S)
-    -> ( productionsForSymbol(S, ProductionList, Prods),
-         append(T, Prods, ET),
+
+% expandSituationSet(ZbiórSytuacji, ListaProdukcji, Akumulator, RozszerzonyZbiórSytuacji)
+expandSituationSet([], _, Acc, SortedResult) :- sort(Acc, SortedResult).
+expandSituationSet([Head | Tail], ProdList, Acc, ResultSitutationSet) :-
+  member(Head, Acc),
+  expandSituationSet(Tail, ProdList, Acc, ResultSitutationSet).
+expandSituationSet([Head | Tail], ProdList, Acc, ResultSitutationSet) :-
+  nonmember(Head, Acc),
+  ( nonterminalAfterDot(Head, S)
+    -> ( productionsForSymbol(S, ProdList, Prods),
+         append(Tail, Prods, ET),
          remove_dups(ET, PET),
-         expandSituationSet(PET, ProductionList, [H | Acc], ResultSitutationSet) )
-    ;  expandSituationSet(T, ProductionList, [H | Acc], ResultSitutationSet)
+         expandSituationSet(PET, ProdList, [Head | Acc], ResultSitutationSet) )
+    ; expandSituationSet(Tail, ProdList, [Head | Acc], ResultSitutationSet)
   ).
 
 
-productionsForSymbol(Symbol, Productions, Result) :- productionsForSymbol(Symbol, Productions, [], Result).
+% productionsForSymbol(Symbol, WszystkieProdukcje, ProdukcjeDlaSymbolu)
+productionsForSymbol(Symbol, Productions, Result) :-
+  productionsForSymbol(Symbol, Productions, [], Result).
 
+% productionsForSymbol(Symbol, ListaProdukcji, Akumulator, ProdukcjeDlaSymbolu)
 productionsForSymbol(_, [], Result, Result).
-productionsForSymbol(S, [production(X, Prod) | Tail], Acc, Result) :-
+productionsForSymbol(S, [pr(X, Prod) | Tail], Acc, Result) :-
   ( X == S
-   -> productionsForSymbol(S, Tail, [production(S, [dot | Prod]) | Acc], Result)
+   -> productionsForSymbol(S, Tail, [pr(S, [dot | Prod]) | Acc], Result)
    ;  productionsForSymbol(S, Tail, Acc, Result)
   ).
 
 
-nonterminalAfterDot(production(_, [dot, nt(X) | _]), X).
-nonterminalAfterDot(production(S, [_ | T]), Result) :- nonterminalAfterDot(production(S, T), Result).
+% nonterminalAfterDot(Produkcja, NieterminalZaKropką)
+nonterminalAfterDot(pr(_, [dot, nt(X) | _]), X).
+nonterminalAfterDot(pr(S, [_ | Tail]), Result) :-
+  nonterminalAfterDot(pr(S, Tail), Result).
 
 
-symbolAfterDot(production(_, [dot, X | _]), X).
-symbolAfterDot(production(S, [_ | T]), Result) :- symbolAfterDot(production(S, T), Result).
+% symbolAfterDot(Produkcja, SymbolZaKropką)
+symbolAfterDot(pr(_, [dot, X | _]), X).
+symbolAfterDot(pr(S, [_ | Tail]), Result) :- symbolAfterDot(pr(S, Tail), Result).
 
 
-allAfterDot(ProductionList, SymbolList) :- allAfterDot(ProductionList, [], SymbolList).
+% symbolAfterDot(ListaProdukcji, WszystkieSymboleWystępująceZaKropkami)
+allAfterDot(ProdList, SymbolList) :- allAfterDot(ProdList, [], SymbolList).
 
-allAfterDot([], SymbolList, SortedSymbolList) :- remove_dups(SymbolList, SortedSymbolList).
-allAfterDot([H | T], Acc, Result) :-
-  symbolAfterDot(H, S)
-  -> allAfterDot(T, [S | Acc], Result)
-  ;  allAfterDot(T, Acc, Result).
+% symbolAfterDot(ListaProdukcji, Akumulator, ListaSymboli)
+allAfterDot([], SymbolList, SortedSymbolList) :-
+  remove_dups(SymbolList, SortedSymbolList).
+allAfterDot([Head | Tail], Acc, Result) :-
+  symbolAfterDot(Head, Symbol)
+  -> allAfterDot(Tail, [Symbol | Acc], Result)
+  ;  allAfterDot(Tail, Acc, Result).
 
 
-goto(SituationSet, Symbol, Result) :- goto(SituationSet, Symbol, [], Result).
+% transition(ZbiórSytuacji, NapotkanySymbol, ZalążkiNowychStanów)
+transition(SituationSet, Symbol, NewStateStubs) :-
+  transition(SituationSet, Symbol, [], NewStateStubs).
 
-goto([], _, Result, SortedResult) :- remove_dups(Result, SortedResult).
-goto([H | T], Symbol, Acc, Result) :-
-  ( symbolAfterDot(H, Symbol)
-    -> ( moveDot(H, NH),
-         goto(T, Symbol, [NH | Acc], Result) )
-    ; goto(T, Symbol, Acc, Result)
+% transition(ListaSytuacji, NapotkanySymbol, Akumulator, ZalążkiNowychStanów)
+transition([], _, Acc, Result) :- remove_dups(Acc, Result).
+transition([Situation | Tail], Symbol, Acc, Result) :-
+  ( symbolAfterDot(Situation, Symbol)
+    -> ( moveDot(Situation, NewSituation),
+         transition(Tail, Symbol, [NewSituation | Acc], Result) )
+    ; transition(Tail, Symbol, Acc, Result)
   ).
 
+% moveDot(Sytuacja, SytuacjaZPrzesuniętąKropką)
+moveDot(Situation, NewSituation) :- moveDot(Situation, [], NewSituation).
 
-moveDot(Before, After) :- moveDot(Before, [], After).
-
-moveDot(production(S, [dot, X | Tail]), Acc, production(S, Result)) :-
+% moveDot(Sytuacja, Akumulator, SytuacjaZPrzesuniętąKropką)
+moveDot(pr(Nt, [dot, X | ProdTail]), Acc, pr(Nt, NewRHS)) :-
   reverse(Acc, RevAcc),
-  append(RevAcc, [X, dot | Tail], Result).
-moveDot(production(S, [X | Tail]), Acc, Result) :-
+  append(RevAcc, [X, dot | ProdTail], NewRHS).
+moveDot(pr(Nt, [X | ProdTail]), Acc, Result) :-
   X \= dot,
-  moveDot(production(S, Tail), [X | Acc], Result).
+  moveDot(pr(Nt, ProdTail), [X | Acc], Result).
+
+
 
 nonmember(Element, List) :- \+ member(Element, List).
 
