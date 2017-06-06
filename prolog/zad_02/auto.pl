@@ -17,16 +17,88 @@
 % pr(NazwaNieterminala, PrawaStronaProdukcji)
 % state(Produkcje, KrawędziePrzychodzące)
 
-% transition(Symbol, NumerSytuacji)
-% automat(ListaProdukcji, TabelaActionGoTo)
-
-
 
 % createLR(Gramatyka, Automat, Info)
 createLR(Grammar, Automat, Info) :-
   expandGrammar(Grammar, ProdList),
   createGraph(ProdList, StateList),
   createAutomaton(StateList, Automat, Info).
+
+
+createAutomaton(StateList, Automat, Info) :-
+  createAutomaton(StateList, StateList, [], Automat, Info).
+
+createAutomaton([], _, Acc, Automat, yes) :- reverse(Acc, Automat).
+createAutomaton([State | Tail], AllStates, Acc, Automat, Info) :-
+  reductionsInState(State, Reductions),
+  length(Reductions, ReductionsNumber),
+  (
+    ReductionsNumber > 1
+    -> Info = konflikt("Konflikt reduce-reduce")
+    ; (
+      length(Acc, StateNumber),
+      outgoingEdges(StateNumber, AllStates, OutgoingEdges),
+      shiftsInState(OutgoingEdges, Shifts),
+      goTosInState(OutgoingEdges, Gotos),
+      length(Shifts, ShiftsNumber),
+      % write("State: "), write(State), nl,
+      % write("Edges: "), write(OutgoingEdges), nl,
+      % write("Reductions: "), write(Reductions), nl,
+      % write("Shifts: "), write(Shifts), nl,
+      (
+        ( ReductionsNumber =:= 1, ShiftsNumber > 0 )
+        -> Info = konflikt("Konflikt shift-reduce")
+        ;  createAutomaton(Tail, AllStates, [row(StateNumber, Reductions, Shifts, Gotos) | Acc], Automat, Info)
+      )
+  )
+  ).
+
+
+shiftsInState(OutgoingEdges, Shifts) :-
+  shiftsInState(OutgoingEdges, [], Shifts).
+
+shiftsInState([], Shifts, Shifts).
+shiftsInState([ed(S, N) | Tail], Acc, Shifts) :-
+  S \= nt(_)
+  -> shiftsInState(Tail, [shift(S, N) | Acc], Shifts)
+  ;  shiftsInState(Tail, Acc, Shifts).
+
+
+goTosInState(OutgoingEdges, Shifts) :-
+  goTosInState(OutgoingEdges, [], Shifts).
+
+goTosInState([], Shifts, Shifts).
+goTosInState([ed(S, N) | Tail], Acc, Shifts) :-
+  S = nt(_)
+  -> goTosInState(Tail, [goto(S, N) | Acc], Shifts)
+  ;  goTosInState(Tail, Acc, Shifts).
+
+
+outgoingEdges(StateNumber, AllStates, OutgoingEdges) :-
+  reverse(AllStates, RevStates),
+  outgoingEdges(StateNumber, RevStates, [], OutgoingEdges).
+
+outgoingEdges(_, [], OutgoingEdges, OutgoingEdges).
+outgoingEdges(StateNumber, [state(_, InEdges) | Tail], Acc, OutgoingEdges) :-
+  length(Tail, DestNumber),
+  edgesWithNumber(StateNumber, DestNumber, InEdges, Acc, NewAcc),
+  outgoingEdges(StateNumber, Tail, NewAcc, OutgoingEdges).
+
+
+edgesWithNumber(_, _, [], FilteredEdges, FilteredEdges).
+edgesWithNumber(SrcNumber, DestNumber, [ed(S, N) | Tail], Acc, FilteredEdges) :-
+  N =:= SrcNumber
+  -> edgesWithNumber(SrcNumber, DestNumber, Tail, [ed(S, DestNumber) | Acc], FilteredEdges)
+  ;  edgesWithNumber(SrcNumber, DestNumber, Tail, Acc, FilteredEdges).
+
+
+reductionsInState(State, Reductions) :- reductionsInState(State, [], Reductions).
+
+reductionsInState(state([], _), Reductions, Reductions).
+reductionsInState(state([pr(S, RHS) | Tail], InEdges), Acc, Reductions) :-
+  last(RHS, dot)
+  -> reductionsInState(state(Tail, InEdges), [red(S, RHS) | Acc], Reductions)
+  ;  reductionsInState(state(Tail, InEdges), Acc, Reductions).
 
 
 % expandGrammar(Gramatyka, RozszerzonaListaProdukcji)
