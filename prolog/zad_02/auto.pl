@@ -3,8 +3,8 @@
  * Zadanie 2 JPP - prolog
  */
 
-:- [fixtures].
-:- [printers].
+% :- [fixtures].
+% :- [printers].
 
 :- use_module(library(lists)).
 
@@ -21,7 +21,9 @@
 % createLR(Gramatyka, Automat, Info)
 createLR(Grammar, Automat, Info) :-
   expandGrammar(Grammar, ProdList),
+  % write("Production list: \n"), printList(ProdList),
   createGraph(ProdList, StateList),
+  % write("State list: \n"), printList(StateList),
   createAutomaton(StateList, Automat, Info).
 
 
@@ -48,7 +50,7 @@ createAutomaton([State | Tail], AllStates, Acc, Automat, Info) :-
       (
         ( ReductionsNumber =:= 1, ShiftsNumber > 0 )
         -> Info = konflikt("Konflikt shift-reduce")
-        ;  createAutomaton(Tail, AllStates, [row(StateNumber, Reductions, Shifts, Gotos) | Acc], Automat, Info)
+        ;  createAutomaton(Tail, AllStates, [row(Reductions, Shifts, Gotos) | Acc], Automat, Info)
       )
   )
   ).
@@ -97,7 +99,10 @@ reductionsInState(State, Reductions) :- reductionsInState(State, [], Reductions)
 reductionsInState(state([], _), Reductions, Reductions).
 reductionsInState(state([pr(S, RHS) | Tail], InEdges), Acc, Reductions) :-
   last(RHS, dot)
-  -> reductionsInState(state(Tail, InEdges), [red(S, RHS) | Acc], Reductions)
+  -> (
+    delete(RHS, dot, RedRHS),
+    reductionsInState(state(Tail, InEdges), [red(S, RedRHS) | Acc], Reductions)
+    )
   ;  reductionsInState(state(Tail, InEdges), Acc, Reductions).
 
 
@@ -121,7 +126,7 @@ flattenProductions([prod(_, []) | OtherProds], Acc, FlatProdList) :-
 
 
 % addInitialProduction(PoczątkowySymbol, ListaProdukcji, RozszerzonaListaProdukcji)
-addInitialProduction(S, ProdList, [pr(`Z`, [S, `#`]) | ProdList]).
+addInitialProduction(S, ProdList, [pr(`Z`, [nt(S), `#`]) | ProdList]).
 
 
 % createGraph(ListaProdukcji, ListaStanów)
@@ -210,11 +215,9 @@ expandSituationSet(InitialSituationSet, ProdList, ResultSitutationSet) :-
 % expandSituationSet(ZbiórSytuacji, ListaProdukcji, Akumulator, RozszerzonyZbiórSytuacji)
 expandSituationSet([], _, Acc, SortedResult) :- sort(Acc, SortedResult).
 expandSituationSet([Head | Tail], ProdList, Acc, ResultSitutationSet) :-
-  member(Head, Acc),
-  expandSituationSet(Tail, ProdList, Acc, ResultSitutationSet).
-expandSituationSet([Head | Tail], ProdList, Acc, ResultSitutationSet) :-
-  nonmember(Head, Acc),
-  ( nonterminalAfterDot(Head, S)
+  member(Head, Acc)
+  -> expandSituationSet(Tail, ProdList, Acc, ResultSitutationSet)
+  ; ( nonterminalAfterDot(Head, S)
     -> ( productionsForSymbol(S, ProdList, Prods),
          append(Tail, Prods, ET),
          remove_dups(ET, PET),
@@ -291,4 +294,62 @@ remove_dups(List, Set) :- % built in in sicstus
   list_to_set(List, SList),
   sort(SList, Set).
 
-accept(_, _) :- true.
+
+accept(Automat, Word) :-
+  append(Word, [`#`], WordWithHash),
+  check(WordWithHash, [0], Automat).
+
+check([], [_, `#` | _], _).
+
+check(Word, Stack, Automat) :-
+  Stack = [StateNumber | _],
+  % write("Word: "), write(Word), nl,
+  % write("Stack: "), write(Stack), nl,
+  nth0(StateNumber, Automat, row(Reductions, Shifts, _)),
+  (
+    Reductions = [Red]
+    -> (
+      % write("Got to reduce!"), nl,
+      % write("reduction: "), write(Red), nl,
+      reduce(Red, Stack, Automat, NewStack),
+      % write("New stack: "), write(NewStack), nl,
+      check(Word, NewStack, Automat)
+    )
+    ; (
+      % write("Shifting time!\n"),
+      % write("Shifts: "), write(Shifts), nl,
+      Word = [Head | Tail],
+      shiftForSymbol(Head, Shifts, ShiftedState),
+      % write("Next state: "), write(ShiftedState), nl,
+      check(Tail, [ShiftedState, Head | Stack], Automat)
+    )
+  ).
+
+
+% shiftForSymbol(Symbol, Shifts, ShiftedState)
+shiftForSymbol(Symbol, [shift(S, N) | Tail], ShiftedState) :-
+  Symbol == S
+  -> N = ShiftedState
+  ; shiftForSymbol(Symbol, Tail, ShiftedState).
+
+gotoForSymbol(Symbol, [goto(S, N) | Tail], NextState) :-
+  Symbol == S
+  -> N = NextState
+  ; gotoForSymbol(Symbol, Tail, NextState).
+
+
+reduce(red(Symbol, RHS), Stack, Automat, NewStack) :-
+  Nt = nt(Symbol),
+  reverse(RHS, RevRHS),
+  doReduction(RevRHS, Stack, ReducedStack),
+  % write("Reduced stack: "), write(ReducedStack), nl,
+  ReducedStack = [StateNumber | _],
+  nth0(StateNumber, Automat, row(_, _, Gotos)),
+  % write("Gotos: "), write(Gotos), nl,
+  gotoForSymbol(Nt, Gotos, NextState),
+  NewStack = [NextState, Nt | ReducedStack].
+
+
+doReduction([], ReducedStack, ReducedStack).
+doReduction([Symbol | RHSTail], [_, Symbol | StackTail], ReducedStack) :-
+  doReduction(RHSTail, StackTail, ReducedStack).

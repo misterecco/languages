@@ -5,7 +5,7 @@ test(NG, ListaSlow) :-
   grammar(NG, G),
   createLR(G, Automat, Info),
   (Info =  konflikt(Opis)
-        -> format(`Konflikt: ~p`, Opis)
+        -> format(`Konflikt: ~p`, Opis), nl
         ;  checkWords(ListaSlow, Automat) ).
 
 checkWords([], _) :- format(`Koniec testu.\n`).
@@ -45,3 +45,9 @@ grammar(ex6, gramatyka(`A`,
 
 
 ?- test(ex1, [[id], [`(`,id,`)`], [id,`+`,ident], [id,`+`,id]]).
+?- test(ex2, [[x], [x,x], [x,x,x], [`A`]]).
+
+?- test(ex3, [[x]]).
+?- test(ex4, [[x]]).
+?- test(ex5, [[x]]).
+?- test(ex6, [[x]]).
