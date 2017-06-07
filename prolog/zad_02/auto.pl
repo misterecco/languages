@@ -3,10 +3,15 @@
  * Zadanie 2 JPP - prolog
  */
 
-% :- [fixtures].
-% :- [printers].
-
-:- use_module(library(lists)).
+/*
+ * W celu utworzenia automatu LR z danej gramatyki tworzony jest najpierw
+ * graf stanów automatu, na podstawie którego tworzona jest tabela ACTION/GOTO
+ * Automat LR składa się z wierszy (predykat row). Każdy wiersz odpowiada jednemu
+ * stanowi w grafie. Pozycja na liście odpowiada numerowi odpowiedniengo stanu.
+ * Każdy wiersz to term row(Redukcje, ListaAkcji, ListaGoto). Redukcje zawierają
+ * pełną produkcję, dzięki czemu nie trzeba pamiętać już ani gramatyki ani
+ * pełnego grafu stanu - wystarczy tabela ACTION/GOTO
+ */
 
 % STRUKTURY DANYCH
 
@@ -15,95 +20,27 @@
 % nt(Nieterminal)
 
 % pr(NazwaNieterminala, PrawaStronaProdukcji)
-% state(Produkcje, KrawędziePrzychodzące)
+% state(Produkcje, KrawędzieWchodzące)
+% ed(Symbol, NumerStanu)
+% red(NazwaNieterminala, PrawaStronaProdukcji)
+% shift(Symbol, NumerStanu)
+% goto(Symbol, NumerStanu)
+% row(Redukcje, ListaShift, ListaGoto)
 
+:- use_module(library(lists)).
 
-% createLR(Gramatyka, Automat, Info)
+/*
+ * createLR(+Gramatyka, -Automat, -Info)
+ * Dla podanej gramatyki tworzy automat LR(0). W przypadku utworzenia automatu
+ * parametr Info powinien mieć nadaną wartość yes,
+ * a w przeciwnym przypadku jego wartością powinien być term
+ * konflikt(Opis), gdzie Opis jest (czytelnym) opisem rozpoznanego
+ * konfliktu, a parametr Automat powinien mieć wówczas nadaną wartość null.
+ */
 createLR(Grammar, Automat, Info) :-
   expandGrammar(Grammar, ProdList),
-  % write("Production list: \n"), printList(ProdList),
   createGraph(ProdList, StateList),
-  % write("State list: \n"), printList(StateList),
   createAutomaton(StateList, Automat, Info).
-
-
-createAutomaton(StateList, Automat, Info) :-
-  createAutomaton(StateList, StateList, [], Automat, Info).
-
-createAutomaton([], _, Acc, Automat, yes) :- reverse(Acc, Automat).
-createAutomaton([State | Tail], AllStates, Acc, Automat, Info) :-
-  reductionsInState(State, Reductions),
-  length(Reductions, ReductionsNumber),
-  (
-    ReductionsNumber > 1
-    -> Info = konflikt("Konflikt reduce-reduce")
-    ; (
-      length(Acc, StateNumber),
-      outgoingEdges(StateNumber, AllStates, OutgoingEdges),
-      shiftsInState(OutgoingEdges, Shifts),
-      goTosInState(OutgoingEdges, Gotos),
-      length(Shifts, ShiftsNumber),
-      % write("State: "), write(State), nl,
-      % write("Edges: "), write(OutgoingEdges), nl,
-      % write("Reductions: "), write(Reductions), nl,
-      % write("Shifts: "), write(Shifts), nl,
-      (
-        ( ReductionsNumber =:= 1, ShiftsNumber > 0 )
-        -> Info = konflikt("Konflikt shift-reduce")
-        ;  createAutomaton(Tail, AllStates, [row(Reductions, Shifts, Gotos) | Acc], Automat, Info)
-      )
-  )
-  ).
-
-
-shiftsInState(OutgoingEdges, Shifts) :-
-  shiftsInState(OutgoingEdges, [], Shifts).
-
-shiftsInState([], Shifts, Shifts).
-shiftsInState([ed(S, N) | Tail], Acc, Shifts) :-
-  S \= nt(_)
-  -> shiftsInState(Tail, [shift(S, N) | Acc], Shifts)
-  ;  shiftsInState(Tail, Acc, Shifts).
-
-
-goTosInState(OutgoingEdges, Shifts) :-
-  goTosInState(OutgoingEdges, [], Shifts).
-
-goTosInState([], Shifts, Shifts).
-goTosInState([ed(S, N) | Tail], Acc, Shifts) :-
-  S = nt(_)
-  -> goTosInState(Tail, [goto(S, N) | Acc], Shifts)
-  ;  goTosInState(Tail, Acc, Shifts).
-
-
-outgoingEdges(StateNumber, AllStates, OutgoingEdges) :-
-  reverse(AllStates, RevStates),
-  outgoingEdges(StateNumber, RevStates, [], OutgoingEdges).
-
-outgoingEdges(_, [], OutgoingEdges, OutgoingEdges).
-outgoingEdges(StateNumber, [state(_, InEdges) | Tail], Acc, OutgoingEdges) :-
-  length(Tail, DestNumber),
-  edgesWithNumber(StateNumber, DestNumber, InEdges, Acc, NewAcc),
-  outgoingEdges(StateNumber, Tail, NewAcc, OutgoingEdges).
-
-
-edgesWithNumber(_, _, [], FilteredEdges, FilteredEdges).
-edgesWithNumber(SrcNumber, DestNumber, [ed(S, N) | Tail], Acc, FilteredEdges) :-
-  N =:= SrcNumber
-  -> edgesWithNumber(SrcNumber, DestNumber, Tail, [ed(S, DestNumber) | Acc], FilteredEdges)
-  ;  edgesWithNumber(SrcNumber, DestNumber, Tail, Acc, FilteredEdges).
-
-
-reductionsInState(State, Reductions) :- reductionsInState(State, [], Reductions).
-
-reductionsInState(state([], _), Reductions, Reductions).
-reductionsInState(state([pr(S, RHS) | Tail], InEdges), Acc, Reductions) :-
-  last(RHS, dot)
-  -> (
-    delete(RHS, dot, RedRHS),
-    reductionsInState(state(Tail, InEdges), [red(S, RedRHS) | Acc], Reductions)
-    )
-  ;  reductionsInState(state(Tail, InEdges), Acc, Reductions).
 
 
 % expandGrammar(Gramatyka, RozszerzonaListaProdukcji)
@@ -126,13 +63,13 @@ flattenProductions([prod(_, []) | OtherProds], Acc, FlatProdList) :-
 
 
 % addInitialProduction(PoczątkowySymbol, ListaProdukcji, RozszerzonaListaProdukcji)
-addInitialProduction(S, ProdList, [pr(`Z`, [nt(S), `#`]) | ProdList]).
+addInitialProduction(S, ProdList, [pr('Z', [nt(S), '#']) | ProdList]).
 
 
 % createGraph(ListaProdukcji, ListaStanów)
 createGraph(ProdList, StateList) :-
-  ProdList = [pr(`Z`, RHS) | _],
-  createGraph(ProdList, [ state([pr(`Z`, [dot | RHS])], []) ], [], StateList).
+  ProdList = [pr('Z', RHS) | _],
+  createGraph(ProdList, [ state([pr('Z', [dot | RHS])], []) ], [], StateList).
 
 % createGraph(ListaProdukcji, StanyDoPrzetworzenia, Akumulator, ListaStanów)
 createGraph(_, [], Acc, StateList) :- reverse(Acc, StateList).
@@ -211,7 +148,6 @@ nextStates([Symbol | Tail], SituationSet, StateNumber, Acc, NewStates) :-
 expandSituationSet(InitialSituationSet, ProdList, ResultSitutationSet) :-
   expandSituationSet(InitialSituationSet, ProdList, [], ResultSitutationSet).
 
-
 % expandSituationSet(ZbiórSytuacji, ListaProdukcji, Akumulator, RozszerzonyZbiórSytuacji)
 expandSituationSet([], _, Acc, SortedResult) :- sort(Acc, SortedResult).
 expandSituationSet([Head | Tail], ProdList, Acc, ResultSitutationSet) :-
@@ -287,69 +223,148 @@ moveDot(pr(Nt, [X | ProdTail]), Acc, Result) :-
   moveDot(pr(Nt, ProdTail), [X | Acc], Result).
 
 
+% createAutomaton(GrafStanów, Automat, Info)
+createAutomaton(StateList, Automat, Info) :-
+  createAutomaton(StateList, StateList, [], Automat, Info).
 
-nonmember(Element, List) :- \+ member(Element, List).
+% createAutomaton(ListaStanówDoPrzetworzenia, GrafStanów, Akumulator, Automat, Info)
+createAutomaton([], _, Acc, Automat, yes) :- reverse(Acc, Automat).
+createAutomaton([State | Tail], AllStates, Acc, Automat, Info) :-
+  reductionsInState(State, Reductions),
+  length(Reductions, ReductionsNumber),
+  (
+    ReductionsNumber > 1
+    -> Automat = null, Info = konflikt("Konflikt reduce-reduce")
+    ; (
+      length(Acc, StateNumber),
+      outgoingEdges(StateNumber, AllStates, OutgoingEdges),
+      shiftsInState(OutgoingEdges, Shifts),
+      gotosInState(OutgoingEdges, Gotos),
+      length(Shifts, ShiftsNumber),
+      (
+        ( ReductionsNumber =:= 1, ShiftsNumber > 0 )
+        -> Automat = null, Info = konflikt("Konflikt shift-reduce")
+        ;  createAutomaton(Tail, AllStates, [row(Reductions, Shifts, Gotos) | Acc], Automat, Info)
+      )
+    )
+  ).
 
-remove_dups(List, Set) :- % built in in sicstus
-  list_to_set(List, SList),
-  sort(SList, Set).
+
+% shiftsInState(ListaWychodzącychKrawędzi, ListaShiftów)
+shiftsInState(OutgoingEdges, Shifts) :-
+  shiftsInState(OutgoingEdges, [], Shifts).
+
+% shiftsInState(ListaKrawędziDoPrzetworzenia, Akumulator, ListaShiftów)
+shiftsInState([], Shifts, Shifts).
+shiftsInState([ed(S, N) | Tail], Acc, Shifts) :-
+  S \= nt(_)
+  -> shiftsInState(Tail, [shift(S, N) | Acc], Shifts)
+  ;  shiftsInState(Tail, Acc, Shifts).
 
 
+% gotosInState(ListaWychodzącychKrawędzi, ListaGoto)
+gotosInState(OutgoingEdges, Shifts) :-
+  gotosInState(OutgoingEdges, [], Shifts).
+
+% gotosInState(ListaKrawędziDoPrzetworzenia, Akumulator, ListaGoto)
+gotosInState([], Shifts, Shifts).
+gotosInState([ed(S, N) | Tail], Acc, Shifts) :-
+  S = nt(_)
+  -> gotosInState(Tail, [goto(S, N) | Acc], Shifts)
+  ;  gotosInState(Tail, Acc, Shifts).
+
+
+% outgoingEdges(NumerStanu, GrafStanów, WychodząceKrawędzie)
+outgoingEdges(StateNumber, AllStates, OutgoingEdges) :-
+  reverse(AllStates, RevStates),
+  outgoingEdges(StateNumber, RevStates, [], OutgoingEdges).
+
+% outgoingEdges(NumerStanu, StanyDoPrzetworzenia, Akumulator, WychodząceKrawędzie)
+outgoingEdges(_, [], OutgoingEdges, OutgoingEdges).
+outgoingEdges(StateNumber, [state(_, InEdges) | Tail], Acc, OutgoingEdges) :-
+  length(Tail, DestNumber),
+  edgesWithNumber(StateNumber, DestNumber, InEdges, Acc, NewAcc),
+  outgoingEdges(StateNumber, Tail, NewAcc, OutgoingEdges).
+
+
+% edgesWithNumber(NumerŹródła, NumerCelu, KrawędzieDoPrzetworzenia,
+%                 Akumulator, PrzefiltrowaneKrawędzie)
+edgesWithNumber(_, _, [], FilteredEdges, FilteredEdges).
+edgesWithNumber(SrcNumber, DestNumber, [ed(S, N) | Tail], Acc, FilteredEdges) :-
+  N =:= SrcNumber
+  -> edgesWithNumber(SrcNumber, DestNumber, Tail, [ed(S, DestNumber) | Acc], FilteredEdges)
+  ;  edgesWithNumber(SrcNumber, DestNumber, Tail, Acc, FilteredEdges).
+
+
+% reductionsInState(Stan, MożliweRedukcje)
+reductionsInState(State, Reductions) :- reductionsInState(State, [], Reductions).
+
+% reductionsInState(Stan, Akumulator, MożliweRedukcje)
+reductionsInState(state([], _), Reductions, Reductions).
+reductionsInState(state([pr(S, RHS) | Tail], InEdges), Acc, Reductions) :-
+  last(RHS, dot)
+  -> (
+    delete(RHS, dot, RedRHS),
+    reductionsInState(state(Tail, InEdges), [red(S, RedRHS) | Acc], Reductions)
+    )
+  ;  reductionsInState(state(Tail, InEdges), Acc, Reductions).
+
+
+/*
+ * accept(Automat, Słowo)
+ * Sukces wtw, gdy podane Słowo należy do języka generowanego przez
+ * gramatykę, dla której został utworzony podany Automat.
+ */
 accept(Automat, Word) :-
-  append(Word, [`#`], WordWithHash),
+  append(Word, ['#'], WordWithHash),
   check(WordWithHash, [0], Automat).
 
-check([], [_, `#` | _], _).
 
+% check(CzęśćSłowaDoPrzetworzenia, Stos, Automat)
+check([], [_, '#' | _], _).
 check(Word, Stack, Automat) :-
   Stack = [StateNumber | _],
-  % write("Word: "), write(Word), nl,
-  % write("Stack: "), write(Stack), nl,
   nth0(StateNumber, Automat, row(Reductions, Shifts, _)),
   (
     Reductions = [Red]
     -> (
-      % write("Got to reduce!"), nl,
-      % write("reduction: "), write(Red), nl,
       reduce(Red, Stack, Automat, NewStack),
-      % write("New stack: "), write(NewStack), nl,
       check(Word, NewStack, Automat)
     )
     ; (
-      % write("Shifting time!\n"),
-      % write("Shifts: "), write(Shifts), nl,
       Word = [Head | Tail],
       shiftForSymbol(Head, Shifts, ShiftedState),
-      % write("Next state: "), write(ShiftedState), nl,
       check(Tail, [ShiftedState, Head | Stack], Automat)
     )
   ).
 
 
-% shiftForSymbol(Symbol, Shifts, ShiftedState)
+% shiftForSymbol(Symbol, ListaShiftów, NowyStan)
 shiftForSymbol(Symbol, [shift(S, N) | Tail], ShiftedState) :-
   Symbol == S
   -> N = ShiftedState
   ; shiftForSymbol(Symbol, Tail, ShiftedState).
 
+
+% gotoForSymbol(Symbol, ListaGoto, NowyStan)
 gotoForSymbol(Symbol, [goto(S, N) | Tail], NextState) :-
   Symbol == S
   -> N = NextState
   ; gotoForSymbol(Symbol, Tail, NextState).
 
 
+% reduce(Redukcja, Stos, Automat, NowyStos)
 reduce(red(Symbol, RHS), Stack, Automat, NewStack) :-
   Nt = nt(Symbol),
   reverse(RHS, RevRHS),
   doReduction(RevRHS, Stack, ReducedStack),
-  % write("Reduced stack: "), write(ReducedStack), nl,
   ReducedStack = [StateNumber | _],
   nth0(StateNumber, Automat, row(_, _, Gotos)),
-  % write("Gotos: "), write(Gotos), nl,
   gotoForSymbol(Nt, Gotos, NextState),
   NewStack = [NextState, Nt | ReducedStack].
 
 
+% doReduction(CzęśćRedukcjiDoPrzetworzenia, StosDoPrzetworzenia, NowyStos)
 doReduction([], ReducedStack, ReducedStack).
 doReduction([Symbol | RHSTail], [_, Symbol | StackTail], ReducedStack) :-
   doReduction(RHSTail, StackTail, ReducedStack).
