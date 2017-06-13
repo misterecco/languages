@@ -1,0 +1,328 @@
+"6:58:05 PM, Wednesday, March 30, 2016: Compressed sources"!
+
+DevelopmentSessionManager installNew!
+
+SessionManager current defaultResourceLibrary loadFlags: 0.
+SessionManager current stashBootInfo!
+
+"Ensure all structures have calculated size to avoid recompilation messages later"
+ExternalStructure allSubclasses do: [:e | e byteSize]!
+
+"Mark all the booted packages as base"
+Package manager markAllPackagesAsBase!
+
+SessionManager current saveImage!
+
+"6:59:05 PM, Wednesday, March 30, 2016: Image saved"!
+
+"Remove rogue .img and unnecessary .chg files"
+File delete: (File default: SessionManager current imagePath extension: 'img').
+File delete: 'DBOOT.chg'!
+
+SessionManager current quit!
+
+"12:14:57, wtorek, 13 czerwca 2017: Dolphin Smalltalk Professional started"!
+
+"12:27:57, wtorek, 13 czerwca 2017: Image saved to 'C:\studia UW\semestr 6\jpp\smalltalk\DPRO.img7'"!
+
+"12:29:09, wtorek, 13 czerwca 2017: Dolphin Smalltalk Professional started"!
+
+1000 factorial!
+
+1000 factorial!
+
+1000 factorial!
+
+1000 factorial!
+
+Smalltalk allClasses size!
+
+CompiledMethod allInstances size!
+
+Object allSubinstances size!
+
+z := 111111.0. Float addInstances!
+
+z := 111111.0. Float allInstances!
+
+x := 'Ala ma kota'!
+
+Float allInstances!
+
+t := SmalltalkWorkspaceDocument show!
+
+t := SmalltalkWorkspaceDocument show!
+
+x := 111111.0. Float allInstances!
+
+x := 'Ala ma kota'!
+
+Float allInstances!
+
+t caption: 'To mój edytor tekstu'!
+
+t view extent: 600 @ 200!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t view position: t view position + (10 @ 10)!
+
+t workspace text: '2 + 2'!
+
+t workspace text: '2 + 2'!
+
+t workspace text: '2 + 2'!
+
+t workspace text: '2 + 2'!
+
+t workspace displayId!
+
+t workspace displayIt!
+
+2 + 2!
+
+t workspace text: '2 + 2'!
+
+t workspace text: '2 + 2'!
+
+t workspace text: '2 + 2'!
+
+t workspace displayIt!
+
+2 + 2!
+
+t workspace displayIt!
+
+4!
+
+t yourAddress!
+
+t exit!
+
+t := View active!
+
+r := Random new!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+t presenter workspace view backcolor: (Color fromInteger: (2 ** 24 * r next) truncated)!
+
+Object subclass: #Osoba
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	classInstanceVariableNames: ''!
+Osoba guid: (GUID fromString: '{0739DC56-4934-475E-8367-9B8DDF02E13D}')!
+Osoba comment: ''!
+!Osoba categoriesForClass!Kernel-Objects! !
+Object subclass: #Osoba
+	instanceVariableNames: 'imie nazwisko'
+	classVariableNames: ''
+	poolDictionaries: ''
+	classInstanceVariableNames: ''!
+
+!Osoba methodsFor!
+imie: a nazwisko: b
+	imie := a.
+	nazwisko := b! !
+!Osoba categoriesFor: #imie:nazwisko:!public! !
+
+!Osoba class methodsFor!
+imie: a nazwisko: b
+	^super new imie: a nazwisko: b! !
+!Osoba class categoriesFor: #imie:nazwisko:!public! !
+
+!Osoba methodsFor!
+imie
+	^imie! !
+!Osoba categoriesFor: #imie!public! !
+
+!Osoba methodsFor!
+nazwisko
+	^nazwisko! !
+!Osoba categoriesFor: #nazwisko!public! !
+
+!Osoba methodsFor!
+nazwisko
+	^nazwisko! !
+!Osoba categoriesFor: #nazwisko!public! !
+
+x := Osoba imie: 'Jan' nazwisko: 'Kowalski'!
+
+x := Osoba imie: 'Jan' nazwisko: 'Kowalski'!
+
+x := Osoba imie: 'Jan' nazwisko: 'Kowalski'!
+
+x := Osoba imie: 'Jan' nazwisko: 'Kowalski'!
+
+'Piotr'!
+
+x imie , ' ' , x nazwisko!
+
+x imie , ' ' , x nazwisko!
+
+!Osoba methodsFor!
+printOn: aStream
+	imie , ' ' , nazwisko printOn: aStream! !
+!Osoba categoriesFor: #printOn:!public! !
+
+!Osoba methodsFor!
+printOn: aStream
+	imie , ' ' , nazwisko printOn: aStream! !
+!Osoba categoriesFor: #printOn:!public! !
+
+x!
+
+'Hello ' * 5!
+
+!SequenceableCollection methodsFor!
+* anInteger
+	^Error notYetImplemented! !
+!SequenceableCollection categoriesFor: #*!public! !
+
+!SequenceableCollection methodsFor!
+* anInteger
+	^anInteger = 0
+		ifTrue: [self class new]
+		ifFalse: [self * (anInteger - 1) , self]! !
+!SequenceableCollection categoriesFor: #*!public! !
+
+'Hello ' * 5!
+
+'Bye' * 3!
+
+'Bye ' * 3!
+
+10 factorial!
+
+'ala ma kota' size!
+
+'ala ma kota'!
+
+k := Object.!
+
+"13:43:03, wtorek, 13 czerwca 2017: Image saved"!

@@ -1,0 +1,72 @@
+12:33:11, wtorek, 13 czerwca 2017: Unhandled exception - a MessageNotUnderstood('Float class does not understand #addInstances')
+
+Float class(Object)>>doesNotUnderstand:
+UndefinedObject>>{unbound}doIt
+CompiledExpression>>value:
+SmalltalkWorkspace>>evaluateRange:ifFail:debug:
+SmalltalkWorkspace>>evaluateItIfFail:debug:
+SmalltalkWorkspace>>evaluateItIfFail:
+SmalltalkWorkspace>>inspectIt
+Symbol>>forwardTo:
+CommandDescription>>performAgainst:
+[] in Command>>value
+BlockClosure>>ifCurtailed:
+BlockClosure>>ensure:
+Command>>value
+ShellView>>performCommand:
+SmalltalkWorkspaceDocument(Shell)>>performCommand:
+CommandQuery>>perform
+DelegatingCommandPolicy(CommandPolicy)>>route:
+[] in ShellView(View)>>onCommand:
+BlockClosure>>ifCurtailed:
+BlockClosure>>ensure:
+----------------------------------------------------------------------------------------------------
+
+12:37:13, wtorek, 13 czerwca 2017: Unhandled exception - a MessageNotUnderstood('SmalltalkWorkspace does not understand #displayId')
+
+SmalltalkWorkspace(Object)>>doesNotUnderstand:
+UndefinedObject>>{unbound}doIt
+CompiledExpression>>value:
+SmalltalkWorkspace>>evaluateRange:ifFail:debug:
+SmalltalkWorkspace>>evaluateItIfFail:debug:
+SmalltalkWorkspace>>evaluateItIfFail:
+SmalltalkWorkspace>>evaluateIt
+Symbol>>forwardTo:
+CommandDescription>>performAgainst:
+[] in Command>>value
+BlockClosure>>ifCurtailed:
+BlockClosure>>ensure:
+Command>>value
+ShellView>>performCommand:
+SmalltalkWorkspaceDocument(Shell)>>performCommand:
+CommandQuery>>perform
+DelegatingCommandPolicy(CommandPolicy)>>route:
+[] in ShellView(View)>>onCommand:
+BlockClosure>>ifCurtailed:
+BlockClosure>>ensure:
+----------------------------------------------------------------------------------------------------
+
+13:28:09, wtorek, 13 czerwca 2017: Unhandled exception - a MessageNotUnderstood('String does not understand #*')
+
+String(Object)>>doesNotUnderstand:
+UndefinedObject>>{unbound}doIt
+CompiledExpression>>value:
+SmalltalkWorkspace>>evaluateRange:ifFail:debug:
+SmalltalkWorkspace>>evaluateRange:ifFail:
+SmalltalkWorkspace>>displayIt
+Symbol>>forwardTo:
+CommandDescription>>performAgainst:
+[] in Command>>value
+BlockClosure>>ifCurtailed:
+BlockClosure>>ensure:
+Command>>value
+ShellView>>performCommand:
+SmalltalkWorkspaceDocument(Shell)>>performCommand:
+CommandQuery>>perform
+DelegatingCommandPolicy(CommandPolicy)>>route:
+[] in ShellView(View)>>onCommand:
+BlockClosure>>ifCurtailed:
+BlockClosure>>ensure:
+Cursor>>showWhile:
+----------------------------------------------------------------------------------------------------
+
